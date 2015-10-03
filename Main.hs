@@ -9,7 +9,7 @@ import Data.Tagged
 import Data.Yaml
 import GHC.Generics
 
-import Template
+import Deploy
 
 data Ctx = Ctx { foo :: String
                , bar :: Int
@@ -18,17 +18,9 @@ data Ctx = Ctx { foo :: String
 
 instance FromJSON Ctx
 
-main :: IO ()
-main = useTemplate (Tagged "p.mustache" :: Template Ctx) "p.out"
+{-main :: IO ()-}
+{-main = useTemplate (Tagged "p.mustache" :: Template Ctx) "p.out"-}
 
---main :: IO ()
---main = do
---    tmpl <- decodeFileEither "conf.yaml"
---    case tmpl of
---        Left ex -> error $ prettyPrintParseException ex
---        Right a -> do print a
---                      let ctx  = mkGenericContext (a :: Ctx)
---                          ctx' = ctx `composeCtx` ctx2
---                      hastacheStr conf txt ctx' >>= T.putStrLn
---  where txt = "Hey {{foo}} {{> p}} ... {{bur.0}}"
---        ctx2 = mkGenericContext $ Ctx "ricardo" 28 $ Just 6666666666
+main :: IO ()
+main = runStep step
+  where step = Templ "p.mustache" "p.out" :: Step Ctx

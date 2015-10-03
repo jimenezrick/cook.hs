@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric      #-}
-
 {-# LANGUAGE ScopedTypeVariables      #-}
 
 module Template where
@@ -25,13 +24,10 @@ import Text.Hastache.Context
 
 import qualified Data.Text.Lazy.IO as T
 
-
-
-
-
 type Template a = Tagged a FilePath
 
-
+toTemplate :: FilePath -> Template a
+toTemplate = Tagged
 
 useTemplate :: forall a. (Data a, Typeable a, Generic a, FromJSON a, Show a)
             => Template a -> FilePath -> IO ()
@@ -51,10 +47,14 @@ hastacheConf tmplsPath = defaultConfig { muEscapeFunc = emptyEscape
                                        , muTemplateFileDir = Just tmplsPath
                                        }
 
-data SystemConf = SystemConf { foo :: String
-               , bar :: Int
-               , bur :: Maybe Int
-               } deriving (Show, Data, Typeable, Generic)
+data SystemConf = SystemConf {
+    filesDir  :: FilePath
+  , tmplDir   :: FilePath
+  , configDir :: FilePath
+  } deriving (Show, Data, Typeable, Generic)
+
+instance Default SystemConf where
+    def = SystemConf "files" "template" "config"
 
 instance FromJSON SystemConf
 
