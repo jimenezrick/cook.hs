@@ -18,9 +18,22 @@ data Ctx = Ctx { foo :: String
 
 instance FromJSON Ctx
 
-{-main :: IO ()-}
-{-main = useTemplate (Tagged "p.mustache" :: Template Ctx) "p.out"-}
+{-
+ -main :: IO ()
+ -main = useTemplate (Tagged "p.mustache" :: Template Ctx) "p.out"
+ -}
+
+{-
+ -main :: IO ()
+ -main = runStep step
+ -  where step = Templ "p.mustache" "p.out" :: Step Ctx
+ -}
+
+
 
 main :: IO ()
-main = runStep step
-  where step = Templ "p.mustache" "p.out" :: Step Ctx
+main = runStepM $ do
+    runStep' cmd
+    runStep' tmpl
+  where tmpl = Templ' "p.mustache" "p.out" :: Step' Ctx
+        cmd  = Cmd' "echo Hello"

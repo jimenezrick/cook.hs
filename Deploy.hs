@@ -25,7 +25,7 @@ data Env a = Env a
 type ReceiptEnv a = ReaderT (Env a) IO
 
 -- type Step = StepM ()
-newtype StepM a = StepM { un :: IO a } deriving Functor
+newtype StepM a = StepM { runStepM :: IO a } deriving Functor
 
 instance Applicative StepM where
     pure = liftIO . return
@@ -35,7 +35,7 @@ instance Applicative StepM where
         return $ f x
 
 instance Monad StepM where
-    StepM a >>= f = StepM $ a >>= un . f
+    StepM a >>= f = StepM $ a >>= runStepM . f
 
 instance MonadIO StepM where
     liftIO = StepM
@@ -52,10 +52,12 @@ data Mode = KeepMode -- | ...
 
 
 data Step' a where
+    Cmd' :: String -> Step' ()
     Templ' :: (Data a, Typeable a, Generic a, FromJSON a) => FilePath -> FilePath -> Step' a
 
-runStep' :: forall a. Show a => Step' a -> IO ()
-runStep' (Templ' src dst) = useTemplate (toTemplate src :: Template a) dst
+runStep' :: forall a. Show a => Step' a -> StepM ()
+runStep' (Cmd' cmd) = liftIO $ callCommand cmd
+runStep' (Templ' src dst) = liftIO $ useTemplate (toTemplate src :: Template a) dst
 
 
 
