@@ -1,5 +1,7 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables      #-}
+{-# LANGUAGE RankNTypes      #-}
 
 module Deploy where
 
@@ -32,6 +34,11 @@ data Owner = KeepOwner -- | ...
 data Mode = KeepMode -- | ...
 
 
+data Step' a where
+    Templ' :: (Data a, Typeable a, Generic a, FromJSON a) => FilePath -> FilePath -> Step' a
+
+runStep' :: forall a. Show a => Step' a -> IO ()
+runStep' (Templ' src dst) = useTemplate (toTemplate src :: Template a) dst
 
 
 
@@ -61,8 +68,6 @@ files =
 
 
 
-
--- TODO: hide every step as a type class to encapsulate the contraints in there
 runStep :: forall a. (Data a, Typeable a, Generic a, FromJSON a, Show a)
               => Step a -> IO ()
 runStep (MkDir dir) = callProcess "mkdir" ["-p", dir]
