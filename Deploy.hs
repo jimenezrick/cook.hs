@@ -2,8 +2,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables      #-}
 {-# LANGUAGE RankNTypes      #-}
+{-# LANGUAGE DeriveFunctor      #-}
 
 module Deploy where
+
+import Control.Monad.IO.Class
 
 import Data.Data
 import GHC.Generics
@@ -21,7 +24,21 @@ data Env a = Env a
 
 type ReceiptEnv a = ReaderT (Env a) IO
 
+-- type Step = StepM ()
+newtype StepM a = StepM { un :: IO a } deriving Functor
 
+instance Applicative StepM where
+    pure = liftIO . return
+    StepM mf <*> StepM mx = StepM $ do
+        f <- mf
+        x <- mx
+        return $ f x
+
+instance Monad StepM where
+    StepM a >>= f = StepM $ a >>= un . f
+
+instance MonadIO StepM where
+    liftIO = StepM
 
 
 
