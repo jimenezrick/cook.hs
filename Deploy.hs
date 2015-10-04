@@ -7,6 +7,7 @@
 module Deploy where
 
 import Control.Monad.IO.Class
+import GHC.IO.Handle
 
 import Data.Data
 import GHC.Generics
@@ -41,6 +42,9 @@ instance MonadIO StepM where
     liftIO = StepM
 
 
+{-type CRes = (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)-}
+type CRes = Maybe Handle
+
 
 foo :: ReceiptEnv a a
 foo = do Env a <- ask
@@ -52,12 +56,12 @@ data Mode = KeepMode -- | ...
 
 
 data Step' a where
-    Cmd' :: String -> Step' ()
+    Cmd' :: String -> Step' a
     Templ' :: (Data a, Typeable a, Generic a, FromJSON a) => FilePath -> FilePath -> Step' a
 
-runStep' :: forall a. Show a => Step' a -> StepM ()
-runStep' (Cmd' cmd) = liftIO $ callCommand cmd
-runStep' (Templ' src dst) = liftIO $ useTemplate (toTemplate src :: Template a) dst
+runStep' :: forall a. Show a => Step' a -> StepM CRes
+runStep' (Cmd' cmd) = liftIO $ callCommand cmd >> return Nothing
+runStep' (Templ' src dst) = liftIO $ useTemplate (toTemplate src :: Template a) dst >> return Nothing
 
 
 
