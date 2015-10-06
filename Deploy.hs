@@ -6,6 +6,9 @@
 
 module Deploy where
 
+import Data.Text.Lazy
+import qualified Data.Text.Lazy.IO as T
+
 import Control.Monad.IO.Class
 import GHC.IO.Handle
 import System.Exit
@@ -22,44 +25,40 @@ import System.Process
 
 import Template
 
-data Env a = Env a
+type Process = (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
 
-type ReceiptEnv a = ReaderT (Env a) IO
-
--- type Step = StepM ()
-newtype StepM a = StepM { runStepM :: IO (a, Maybe Process) } deriving Functor
+newtype StepM a = StepM {
+    unStepM :: IO (a, Maybe Process)
+  } deriving Functor
 
 instance Applicative StepM where
     pure = liftIO . return
-    StepM mf <*> StepM mx = StepM $ do
+    StepM mf <*> StepM ma = StepM $ do
         (f, _) <- mf
-        (x, p) <- mx
-        return $ (f x, p)
+        (a, p) <- ma
+        return $ (f a, p)
 
 instance Monad StepM where
-    -- TODO: with >>= wait and take stdout like (stdout, Process)
-    --       with >>  just wait
-    StepM ma >>= f = StepM $ ma >>= wait >>= runStepM . f
-        where wait (a, Just (i, o, e, h))  = waitForProcess h >> return a
-              wait (a, Nothing)            = return a
+    s >>= f = StepM $ runStepM s >>= unStepM . f
 
 instance MonadIO StepM where
-    liftIO mx = StepM $ mx >>= return . flip (,) Nothing
+    liftIO ma = StepM $ ma >>= return . flip (,) Nothing
 
--- ($|)
+runStepM :: StepM a -> IO a
+runStepM (StepM ma) = do
+    (a, p) <- ma
+    case p of
+        Just (_, _, _, h) -> waitForProcess h >> return a
+        Nothing           -> return a
 
-type Process = (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
+{-data Env a = Env a-}
+{-type ReceiptEnv a = ReaderT (Env a) IO-}
 
-noProcess = (Nothing, Nothing, Nothing, Nothing)
-
-withProcess (stdin, stdout, stderr, proc) = (stdin, stdout, stderr, Just proc)
-
-type CRes = Maybe Handle
-
-
-foo :: ReceiptEnv a a
-foo = do Env a <- ask
-         return a
+{-
+ -foo :: ReceiptEnv a a
+ -foo = do Env a <- ask
+ -         return a
+ -}
 
 data Owner = KeepOwner -- | ...
 
@@ -67,25 +66,44 @@ data Mode = KeepMode -- | ...
 
 
 data Step' a where
-    Proc0 :: FilePath -> Step' CRes
-    Proc :: FilePath -> [String] -> Step' CRes
+    {-Proc0 :: FilePath -> Step' CRes-}
+    {-Proc :: FilePath -> [String] -> Step' CRes-}
     Sh :: String -> Step' a
-    Templ :: (Data a, Typeable a, Generic a, FromJSON a) => FilePath -> FilePath -> Step' a
-
---runStep' :: forall a. Show a => Step' a -> StepM CRes
---runStep' (Cmd cmd) = liftIO $ callCommand cmd >> return Nothing
---runStep' (Templ src dst) = liftIO $ useTemplate (toTemplate src :: Template a) dst >> return Nothing
+    {-Templ :: (Data a, Typeable a, Generic a, FromJSON a) => FilePath -> FilePath -> Step' a-}
 
 
 
+--XXX useTemplate (Templ src dst) = liftIO $ useTemplate (toTemplate src :: Template a) dst >> return Nothing
 
 
-runStep :: forall a. Show a => Step' a -> StepM ()
-runStep (Sh cmd) = StepM $ (createProcess $ shell cmd) >>= return . (,) () . Just
+run :: Show a => Step' a -> StepM ()
+run = runWith id (return . const ())
 
+runWith :: Show a => (CreateProcess -> CreateProcess) -> (Process -> IO b) -> Step' a -> StepM b
+runWith with f (Sh cmd) = StepM $ do
+    p <- createProcess $ with $ shell cmd
+    b <- f p
+    return (b, Just p)
 
+runPipeIn :: Show a => Handle -> Step' a -> StepM ()
+runPipeIn hin = runWith setIn (return . const ())
+  where setIn p = p { std_in = UseHandle hin }
 
+runPipeOut :: Show a => Step' a -> StepM Handle
+runPipeOut = runWith setOut takeOut
+  where setOut p                  = p { std_out = CreatePipe }
+        takeOut (_, Just o, _, _) = return o
 
+runReadOut :: Show a => Step' a -> StepM Text
+runReadOut = runWith setOut readOut
+  where setOut p                  = p { std_out = CreatePipe }
+        readOut (_, Just o, _, _) = T.hGetContents o
+
+(-|-) :: (Show a, Show b) => Step' a -> Step' b -> StepM ()
+producer -|- consumer = do
+    let (StepM ma) = runPipeOut producer
+    (ho, _) <- liftIO $ ma
+    runPipeIn ho consumer
 
 
 

@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric      #-}
-
 {-# LANGUAGE ScopedTypeVariables      #-}
 
 import Control.Monad.IO.Class
@@ -27,8 +26,17 @@ main = void $ runStepM $ do
     {-runStep' cmd-}
     {-runStep' tmpl-}
 
-    runStep echo1
-    runStep echo2
+
+
+    {-t <- runReadOut echo1-}
+    {-run sleep-}
+    {-run echo2-}
+    {-liftIO $ print t-}
+    yes1 -|- wc
+    yes2 -|- wc
+
+
+
 
     {-(_, _, _, Just hdl) <- runStep yes1-}
     {-liftIO $ waitForProcess hdl-}
@@ -44,5 +52,8 @@ main = void $ runStepM $ do
         yes1   = Sh "yes 1" :: Step' ()
         yes2   = Sh "yes 2" :: Step' ()
 
-        echo1 = Sh "sleep 2" :: Step' ()
+        sleep = Sh "sleep 2" :: Step' ()
+        echo1 = Sh "echo 1" :: Step' ()
         echo2 = Sh "echo 2" :: Step' ()
+
+        wc = Sh "wc" :: Step' ()
