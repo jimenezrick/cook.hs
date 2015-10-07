@@ -64,13 +64,42 @@ data Owner = KeepOwner -- | ...
 
 data Mode = KeepMode -- | ...
 
-
 data Step' a where
     {-Proc0 :: FilePath -> Step' CRes-}
     {-Proc :: FilePath -> [String] -> Step' CRes-}
     Sh :: String -> Step' a
     {-Templ :: (Data a, Typeable a, Generic a, FromJSON a) => FilePath -> FilePath -> Step' a-}
+    ShProc :: String -> (CreateProcess -> CreateProcess) -> (Process -> IO b) -> Step' b
+    Pipe :: Step' a -> Step' b -> Step' b -- XXX: user 'error' for Pipe occurences on the left
 
+
+
+--------------------------
+(-||-) :: (Show a, Show b) => Step' a -> Step' b -> Step' b
+producer -||- consumer = Pipe producer consumer
+--------------------------
+
+
+
+
+
+
+sh :: String -> Step' ()
+sh cmd = ShProc cmd id (return . const ()) 
+
+run' :: Show a => Step' a -> StepM a
+run' (ShProc cmd fproc fa) = StepM $ do
+    p <- createProcess $ fproc $ shell cmd
+    b <- fa p
+    return (b, Just p)
+    -- TODO TODO TODO: How to run a Pipe?
+
+withProc :: Show a => (CreateProcess -> CreateProcess) -> Step' a -> Step' a
+withProc fproc (ShProc cmd fproc' fa) = ShProc cmd (fproc . fproc') fa
+
+withPipeIn :: Show a => Handle -> Step' a -> Step' a
+withPipeIn hin = withProc setIn
+  where setIn p = p { std_in = UseHandle hin }
 
 
 --XXX useTemplate (Templ src dst) = liftIO $ useTemplate (toTemplate src :: Template a) dst >> return Nothing
@@ -98,6 +127,10 @@ runReadOut :: Show a => Step' a -> StepM Text
 runReadOut = runWith setOut readOut
   where setOut p                  = p { std_out = CreatePipe }
         readOut (_, Just o, _, _) = T.hGetContents o
+
+--(-|-) :: (Show a, Show b) => Step' a -> Step' b -> Step' b
+-- TODO: Create Pipe data constructor to describe this chain
+-- run $ sh "yes" -|- sh "wc"
 
 (-|-) :: (Show a, Show b) => Step' a -> Step' b -> StepM ()
 producer -|- consumer = do

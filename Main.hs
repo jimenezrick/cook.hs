@@ -32,7 +32,7 @@ main = void $ runStepM $ do
     {-run sleep-}
     {-run echo2-}
     {-liftIO $ print t-}
-    yes1 -|- wc
+    echo1 -|- true
     yes2 -|- wc
 
 
@@ -51,6 +51,8 @@ main = void $ runStepM $ do
         --wc   = Cmd' "wc" :: Step' ()
         yes1   = Sh "yes 1" :: Step' ()
         yes2   = Sh "yes 2" :: Step' ()
+
+        true   = Sh "true" :: Step' ()
 
         sleep = Sh "sleep 2" :: Step' ()
         echo1 = Sh "echo 1" :: Step' ()
