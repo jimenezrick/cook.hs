@@ -101,19 +101,13 @@ cmd_ prog = cmd prog []
 sh :: String -> Step ()
 sh script = Sh script id $ return . const ()
 
-
-
-
-
-
-
-
-
-
 infixr 0 .|
 
 (.|) :: Step a -> Step b -> Step b
-producer .| consumer = Pipe producer consumer
+producer .| consumer | Background _ <- producer  = error "(.|): background step are not allowed in pipes"
+                     | Background _ <- consumer  = error "(.|): background step are not allowed in pipes"
+                     | Pipe _ _     <- producer  = error "(.|): pipe is a right-associative operator"
+                     | otherwise                 = Pipe producer consumer
 
 run :: Step a -> StepM a
 run (Cmd cmd args fproc fa) = StepM $ do
@@ -124,7 +118,7 @@ run (Sh script fproc fa) = StepM $ do
     p <- createProcess $ fproc $ shell script
     a <- fa p
     return (a, Just p)
-run (Pipe cons prod) = runPipe cons prod
+run (Pipe cons prod)  = runPipe cons prod
 run (Background step) = runInBackground step
 
 runPipe :: Step a -> Step b -> StepM b
@@ -136,10 +130,8 @@ runPipe producer consumer = do
 runInBackground :: Step a -> StepM ProcessHandle
 runInBackground step = do
     let (StepM ma) = run step
-    (_, p) <- liftIO ma
-    case p of
-        Nothing            -> error "runInBackground: step without associated process"
-        Just (_, _, _, hp) -> return hp
+    (_, Just (_, _, _, hp)) <- liftIO ma
+    return hp
 
 waitFinished :: ProcessHandle -> StepM ()
 waitFinished proc = do
@@ -168,7 +160,8 @@ withOutText :: Step a -> Step Text
 withOutText = withResult (\(_, Just hout, _, _) -> T.hGetContents hout) . withOutPipe
 
 inBackground :: Step a -> Step ProcessHandle
-inBackground = Background
+inBackground (Background _) = error "inBackground: step already marked as background"
+inBackground step           = Background step
 
 
 
