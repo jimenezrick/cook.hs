@@ -32,8 +32,9 @@ main = void $ runStepM $ do
     {-run sleep-}
     {-run echo2-}
     {-liftIO $ print t-}
-    echo1 -|- true
-    yes2 -|- wc
+
+    run $ sh "echo 1" -|- sh "wc" -|- sh "wc"
+    run $ sh "yes 2" -|- sh "wc"
 
 
 
@@ -44,18 +45,3 @@ main = void $ runStepM $ do
 
     {-runStep' echo $| runStep' wc-}
 
-  -- TODO: create aux functions to run and build values
-  where --tmpl = Templ' "p.mustache" "p.out" :: Step' Ctx
-        --cmd  = Cmd' "echo Hello" :: Step' ()
-        --echo = Cmd' "echo Hello" :: Step' ()
-        --wc   = Cmd' "wc" :: Step' ()
-        yes1   = Sh "yes 1" :: Step' ()
-        yes2   = Sh "yes 2" :: Step' ()
-
-        true   = Sh "true" :: Step' ()
-
-        sleep = Sh "sleep 2" :: Step' ()
-        echo1 = Sh "echo 1" :: Step' ()
-        echo2 = Sh "echo 2" :: Step' ()
-
-        wc = Sh "wc" :: Step' ()

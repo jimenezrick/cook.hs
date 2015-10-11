@@ -60,90 +60,71 @@ runStepM (StepM ma) = do
  -         return a
  -}
 
-data Owner = KeepOwner -- | ...
+{-data Owner = KeepOwner -- | ...-}
 
-data Mode = KeepMode -- | ...
-
-data Step' a where
-    {-Proc0 :: FilePath -> Step' CRes-}
-    {-Proc :: FilePath -> [String] -> Step' CRes-}
-    Sh :: String -> Step' a
-    {-Templ :: (Data a, Typeable a, Generic a, FromJSON a) => FilePath -> FilePath -> Step' a-}
-    ShProc :: String -> (CreateProcess -> CreateProcess) -> (Process -> IO b) -> Step' b
-    Pipe :: Step' a -> Step' b -> Step' b -- XXX: user 'error' for Pipe occurences on the left
-
-
-
---------------------------
-(-||-) :: (Show a, Show b) => Step' a -> Step' b -> Step' b
-producer -||- consumer = Pipe producer consumer
---------------------------
-
-
-
-
-
-
-sh :: String -> Step' ()
-sh cmd = ShProc cmd id (return . const ()) 
-
-run' :: Show a => Step' a -> StepM a
-run' (ShProc cmd fproc fa) = StepM $ do
-    p <- createProcess $ fproc $ shell cmd
-    b <- fa p
-    return (b, Just p)
-    -- TODO TODO TODO: How to run a Pipe?
-
-withProc :: Show a => (CreateProcess -> CreateProcess) -> Step' a -> Step' a
-withProc fproc (ShProc cmd fproc' fa) = ShProc cmd (fproc . fproc') fa
-
-withPipeIn :: Show a => Handle -> Step' a -> Step' a
-withPipeIn hin = withProc setIn
-  where setIn p = p { std_in = UseHandle hin }
-
+{-data Mode = KeepMode -- | ...-}
 
 --XXX useTemplate (Templ src dst) = liftIO $ useTemplate (toTemplate src :: Template a) dst >> return Nothing
 
+data Step a where
+    Cmd  :: FilePath -> [String] -> (CreateProcess -> CreateProcess) -> (Process -> IO a) -> Step a
+    Sh   :: String -> (CreateProcess -> CreateProcess) -> (Process -> IO a) -> Step a
+    Pipe :: Step a -> Step b -> Step b
+    {-Templ :: (Data a, Typeable a, Generic a, FromJSON a) => FilePath -> FilePath -> Step a-}
 
-run :: Show a => Step' a -> StepM ()
-run = runWith id (return . const ())
+cmd :: FilePath -> [String] -> Step ()
+cmd prog args = Cmd prog args id $ return . const ()
 
-runWith :: Show a => (CreateProcess -> CreateProcess) -> (Process -> IO b) -> Step' a -> StepM b
-runWith with f (Sh cmd) = StepM $ do
-    p <- createProcess $ with $ shell cmd
-    b <- f p
-    return (b, Just p)
+cmd_ :: FilePath -> Step ()
+cmd_ prog = cmd prog []
 
-runPipeIn :: Show a => Handle -> Step' a -> StepM ()
-runPipeIn hin = runWith setIn (return . const ())
-  where setIn p = p { std_in = UseHandle hin }
+sh :: String -> Step ()
+sh script = Sh script id $ return . const ()
 
-runPipeOut :: Show a => Step' a -> StepM Handle
-runPipeOut = runWith setOut takeOut
-  where setOut p                  = p { std_out = CreatePipe }
-        takeOut (_, Just o, _, _) = return o
+infixr 0 -|-
 
-runReadOut :: Show a => Step' a -> StepM Text
-runReadOut = runWith setOut readOut
-  where setOut p                  = p { std_out = CreatePipe }
-        readOut (_, Just o, _, _) = T.hGetContents o
+(-|-) :: Step a -> Step b -> Step b
+producer -|- consumer = Pipe producer consumer
 
---(-|-) :: (Show a, Show b) => Step' a -> Step' b -> Step' b
--- TODO: Create Pipe data constructor to describe this chain
--- run $ sh "yes" -|- sh "wc"
-
-(-|-) :: (Show a, Show b) => Step' a -> Step' b -> StepM ()
-producer -|- consumer = do
-    let (StepM ma) = runPipeOut producer
+runPipe :: Step a -> Step b -> StepM b
+runPipe producer@(Sh _ _ _) consumer = do
+    let (StepM ma) = run $ withOutPipe producer
     (ho, _) <- liftIO $ ma
-    runPipeIn ho consumer
+    case consumer of
+        Pipe step1 step2 -> run $ Pipe (withInHandle ho step1) step2
+        _                -> run $ withInHandle ho consumer
+
+run :: Step a -> StepM a
+run (Cmd cmd args fproc fa) = StepM $ do
+    p <- createProcess $ fproc $ proc cmd args
+    a <- fa p
+    return (a, Just p)
+run (Sh script fproc fa) = StepM $ do
+    p <- createProcess $ fproc $ shell script
+    a <- fa p
+    return (a, Just p)
+run (Pipe cons prod) = runPipe cons prod
+
+withProc :: (CreateProcess -> CreateProcess) -> Step a -> Step a
+withProc fproc (Sh script fproc' fa) = Sh script (fproc . fproc') fa
+
+withResult :: (Process -> IO b) -> Step a -> Step b
+withResult fb (Sh script fproc _) = Sh script fproc fb
+
+withInHandle :: Handle -> Step a -> Step a
+withInHandle hin = withProc (\p -> p { std_in = UseHandle hin })
+
+withOutPipe :: Step a -> Step Handle
+withOutPipe = withProc (\p -> p { std_out = CreatePipe }) . withResult (\(_, Just o, _, _) -> return o)
+
+withOutText :: Step a -> Step Text
+withOutText = withResult (\(_, Just o, _, _) -> T.hGetContents o) . withOutPipe
 
 
 
 
+-- TODO: implement some kind of nested commands to implement high-level actions
 
-
------------------------------------------------------------------------------------
 {-
  -data Step a = Cp -- XXX
  -          | CpR -- XXX
@@ -170,14 +151,6 @@ producer -|- consumer = do
  -
  -
  -
- -runStep :: forall a. (Data a, Typeable a, Generic a, FromJSON a, Show a)
- -              => Step a -> IO ()
- -runStep (MkDir dir) = callProcess "mkdir" ["-p", dir]
- -runStep (Templ src dst) = useTemplate (toTemplate src :: Template a) dst
- -
- -runRecipe :: forall a. (Data a, Typeable a, Generic a, FromJSON a, Show a)
- -              => Recipe a -> IO ()
- -runRecipe recp = mapM_ runStep recp
  -
  -
  -resolveSrcPath :: FilePath -> FilePath
