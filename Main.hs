@@ -27,10 +27,15 @@ main :: IO ()
 main = void $ runStepM $ do
     liftIO $ putStrLn "Start"
 
+    --run $ cmd_ "false"
+    p <- run $ inBackground $ cmd "sleep" ["2"]
+
     out <- run $ withOutText $ cmd_ "date"
     liftIO $ T.putStr out
 
     run $ cmd "uname" ["-a"]
-    run $ sh "dmesg" -|- sh "uniq" -|- sh "wc"
+    run $ sh "dmesg" .| sh "uniq" .| sh "wc"
+
+    waitFinished p
 
     liftIO $ putStrLn "End"

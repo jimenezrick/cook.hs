@@ -9,16 +9,20 @@ module Deploy where
 import Data.Text.Lazy
 import qualified Data.Text.Lazy.IO as T
 
+import Control.Exception
 import Control.Monad.IO.Class
 import GHC.IO.Handle
 import System.Exit
 
-import Data.Data
+import Text.Printf
+
+import Data.Typeable
 import GHC.Generics
 import Data.Yaml
 
 import Data.Tree
 import Control.Monad.Reader
+import System.Exit
 import System.Directory
 import System.FilePath
 import System.Process
@@ -28,7 +32,6 @@ import Template
 type Process = (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
 
 newtype StepM a = StepM {
-    -- TODO: add execution mode
     -- TODO: trace mode, record commands executed, display if error code
     unStepM :: IO (a, Maybe Process)
   } deriving Functor
@@ -50,9 +53,22 @@ runStepM :: StepM a -> IO a
 runStepM (StepM ma) = do
     (a, p) <- ma
     case p of
-        -- TODO: check exit code here, raise if mode enabled
-        Just (_, _, _, h) -> waitForProcess h >> return a
+        Just (_, _, _, h) -> do exit <- waitForProcess h
+                                case exit of
+                                    ExitSuccess      -> return a
+                                    ExitFailure code -> throwIO $ ProcessFailure code
         Nothing           -> return a
+
+
+
+
+data ProcessFailure = ProcessFailure Int deriving Typeable
+
+instance Show ProcessFailure where
+    show (ProcessFailure code) = printf "Error: process failed with exit code %d" code
+
+instance Exception ProcessFailure
+
 
 {-data Env a = Env a-}
 {-type ReceiptEnv a = ReaderT (Env a) IO-}
@@ -70,9 +86,10 @@ runStepM (StepM ma) = do
 --XXX useTemplate (Templ src dst) = liftIO $ useTemplate (toTemplate src :: Template a) dst >> return Nothing
 
 data Step a where
-    Cmd  :: FilePath -> [String] -> (CreateProcess -> CreateProcess) -> (Process -> IO a) -> Step a
-    Sh   :: String -> (CreateProcess -> CreateProcess) -> (Process -> IO a) -> Step a
-    Pipe :: Step a -> Step b -> Step b
+    Cmd        :: FilePath -> [String] -> (CreateProcess -> CreateProcess) -> (Process -> IO a) -> Step a
+    Sh         :: String -> (CreateProcess -> CreateProcess) -> (Process -> IO a) -> Step a
+    Pipe       :: Step a -> Step b -> Step b
+    Background :: Step a -> Step ProcessHandle
     {- TODO: Templ :: (Data a, Typeable a, Generic a, FromJSON a) => FilePath -> FilePath -> Step a-}
 
 cmd :: FilePath -> [String] -> Step ()
@@ -84,19 +101,20 @@ cmd_ prog = cmd prog []
 sh :: String -> Step ()
 sh script = Sh script id $ return . const ()
 
-infixr 0 -|-
 
-(-|-) :: Step a -> Step b -> Step b
-producer -|- consumer = Pipe producer consumer
 
-runPipe :: Step a -> Step b -> StepM b
-runPipe producer consumer = do
-    let (StepM ma) = run $ withOutPipe producer
-    (ho, _) <- liftIO $ ma
-    run $ withInHandle ho consumer
 
--- TODO: return exit code
--- TODO: inject execution mode
+
+
+
+
+
+
+infixr 0 .|
+
+(.|) :: Step a -> Step b -> Step b
+producer .| consumer = Pipe producer consumer
+
 run :: Step a -> StepM a
 run (Cmd cmd args fproc fa) = StepM $ do
     p <- createProcess $ fproc $ proc cmd args
@@ -107,6 +125,28 @@ run (Sh script fproc fa) = StepM $ do
     a <- fa p
     return (a, Just p)
 run (Pipe cons prod) = runPipe cons prod
+run (Background step) = runInBackground step
+
+runPipe :: Step a -> Step b -> StepM b
+runPipe producer consumer = do
+    let (StepM ma) = run $ withOutPipe producer
+    (ho, _) <- liftIO ma
+    run $ withInHandle ho consumer
+
+runInBackground :: Step a -> StepM ProcessHandle
+runInBackground step = do
+    let (StepM ma) = run step
+    (_, p) <- liftIO ma
+    case p of
+        Nothing            -> error "runInBackground: step without associated process"
+        Just (_, _, _, hp) -> return hp
+
+waitFinished :: ProcessHandle -> StepM ()
+waitFinished proc = do
+    exit <- liftIO $ waitForProcess proc
+    case exit of
+        ExitSuccess      -> return ()
+        ExitFailure code -> liftIO $ throwIO $ ProcessFailure code
 
 withProc :: (CreateProcess -> CreateProcess) -> Step a -> Step a
 withProc fproc (Cmd cmd args fproc' fa) = Cmd cmd args (fproc . fproc') fa
@@ -126,6 +166,9 @@ withOutPipe = withProc (\p -> p { std_out = CreatePipe }) . withResult (\(_, Jus
 
 withOutText :: Step a -> Step Text
 withOutText = withResult (\(_, Just hout, _, _) -> T.hGetContents hout) . withOutPipe
+
+inBackground :: Step a -> Step ProcessHandle
+inBackground = Background
 
 
 
