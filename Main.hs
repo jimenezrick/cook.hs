@@ -6,6 +6,8 @@
 import Control.Monad.IO.Class
 import System.Process
 
+import qualified Data.Text.Lazy.IO as T
+
 import Control.Monad
 import Data.Data
 import Data.Tagged
@@ -23,25 +25,14 @@ instance FromJSON Ctx
 
 main :: IO ()
 main = void $ runStepM $ do
-    {-runStep' cmd-}
-    {-runStep' tmpl-}
+    liftIO $ putStrLn "Start"
 
+    run $ sh "sleep 1"
 
+    out <- run $ withOutText $ cmd_ "date"
+    liftIO $ T.putStr out
 
-    {-t <- runReadOut echo1-}
-    {-run sleep-}
-    {-run echo2-}
-    {-liftIO $ print t-}
+    run $ cmd "uname" ["-a"]
+    run $ sh "dmesg" -|- sh "uniq" -|- sh "wc"
 
-    run $ sh "echo 1" -|- sh "wc" -|- sh "wc"
-    run $ sh "yes 2" -|- sh "wc"
-
-
-
-
-    {-(_, _, _, Just hdl) <- runStep yes1-}
-    {-liftIO $ waitForProcess hdl-}
-    {-runStep yes2-}
-
-    {-runStep' echo $| runStep' wc-}
-
+    liftIO $ putStrLn "End"

@@ -90,9 +90,7 @@ runPipe :: Step a -> Step b -> StepM b
 runPipe producer@(Sh _ _ _) consumer = do
     let (StepM ma) = run $ withOutPipe producer
     (ho, _) <- liftIO $ ma
-    case consumer of
-        Pipe step1 step2 -> run $ Pipe (withInHandle ho step1) step2
-        _                -> run $ withInHandle ho consumer
+    run $ withInHandle ho consumer
 
 run :: Step a -> StepM a
 run (Cmd cmd args fproc fa) = StepM $ do
@@ -106,10 +104,14 @@ run (Sh script fproc fa) = StepM $ do
 run (Pipe cons prod) = runPipe cons prod
 
 withProc :: (CreateProcess -> CreateProcess) -> Step a -> Step a
-withProc fproc (Sh script fproc' fa) = Sh script (fproc . fproc') fa
+withProc fproc (Cmd cmd args fproc' fa) = Cmd cmd args (fproc . fproc') fa
+withProc fproc (Sh script fproc' fa)    = Sh script (fproc . fproc') fa
+withProc fproc (Pipe cons prod)         = Pipe (withProc fproc cons) prod
 
 withResult :: (Process -> IO b) -> Step a -> Step b
-withResult fb (Sh script fproc _) = Sh script fproc fb
+withResult fb (Cmd cmd args fproc _) = Cmd cmd args fproc fb
+withResult fb (Sh script fproc _)    = Sh script fproc fb
+withResult fb (Pipe cons prod)       = Pipe cons (withResult fb prod)
 
 withInHandle :: Handle -> Step a -> Step a
 withInHandle hin = withProc (\p -> p { std_in = UseHandle hin })
