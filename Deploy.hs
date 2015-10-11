@@ -28,6 +28,8 @@ import Template
 type Process = (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
 
 newtype StepM a = StepM {
+    -- TODO: add execution mode
+    -- TODO: trace mode, record commands executed, display if error code
     unStepM :: IO (a, Maybe Process)
   } deriving Functor
 
@@ -48,6 +50,7 @@ runStepM :: StepM a -> IO a
 runStepM (StepM ma) = do
     (a, p) <- ma
     case p of
+        -- TODO: check exit code here, raise if mode enabled
         Just (_, _, _, h) -> waitForProcess h >> return a
         Nothing           -> return a
 
@@ -70,7 +73,7 @@ data Step a where
     Cmd  :: FilePath -> [String] -> (CreateProcess -> CreateProcess) -> (Process -> IO a) -> Step a
     Sh   :: String -> (CreateProcess -> CreateProcess) -> (Process -> IO a) -> Step a
     Pipe :: Step a -> Step b -> Step b
-    {-Templ :: (Data a, Typeable a, Generic a, FromJSON a) => FilePath -> FilePath -> Step a-}
+    {- TODO: Templ :: (Data a, Typeable a, Generic a, FromJSON a) => FilePath -> FilePath -> Step a-}
 
 cmd :: FilePath -> [String] -> Step ()
 cmd prog args = Cmd prog args id $ return . const ()
@@ -87,11 +90,13 @@ infixr 0 -|-
 producer -|- consumer = Pipe producer consumer
 
 runPipe :: Step a -> Step b -> StepM b
-runPipe producer@(Sh _ _ _) consumer = do
+runPipe producer consumer = do
     let (StepM ma) = run $ withOutPipe producer
     (ho, _) <- liftIO $ ma
     run $ withInHandle ho consumer
 
+-- TODO: return exit code
+-- TODO: inject execution mode
 run :: Step a -> StepM a
 run (Cmd cmd args fproc fa) = StepM $ do
     p <- createProcess $ fproc $ proc cmd args
@@ -117,10 +122,10 @@ withInHandle :: Handle -> Step a -> Step a
 withInHandle hin = withProc (\p -> p { std_in = UseHandle hin })
 
 withOutPipe :: Step a -> Step Handle
-withOutPipe = withProc (\p -> p { std_out = CreatePipe }) . withResult (\(_, Just o, _, _) -> return o)
+withOutPipe = withProc (\p -> p { std_out = CreatePipe }) . withResult (\(_, Just hout, _, _) -> return hout)
 
 withOutText :: Step a -> Step Text
-withOutText = withResult (\(_, Just o, _, _) -> T.hGetContents o) . withOutPipe
+withOutText = withResult (\(_, Just hout, _, _) -> T.hGetContents hout) . withOutPipe
 
 
 

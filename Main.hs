@@ -27,8 +27,6 @@ main :: IO ()
 main = void $ runStepM $ do
     liftIO $ putStrLn "Start"
 
-    run $ sh "sleep 1"
-
     out <- run $ withOutText $ cmd_ "date"
     liftIO $ T.putStr out
 
