@@ -92,6 +92,10 @@ data Step a where
     Background :: Step a -> Step ProcessHandle
     {- TODO: Templ :: (Data a, Typeable a, Generic a, FromJSON a) => FilePath -> FilePath -> Step a-}
 
+instance Show (Step a) where
+    show (Cmd cmd args _ _) = printf "Cmd %s %s" (show cmd) (show args)
+    -- TODO: rest
+
 cmd :: FilePath -> [String] -> Step ()
 cmd prog args = Cmd prog args id $ return . const ()
 
