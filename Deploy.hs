@@ -57,7 +57,7 @@ runStepM (StepM ma) = do
                                 case exit of
                                     ExitSuccess      -> return a
                                     ExitFailure code -> throwIO $ ProcessFailure code
-        Nothing           -> return a
+        Nothing -> return a
 
 
 

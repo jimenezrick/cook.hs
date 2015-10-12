@@ -36,6 +36,9 @@ main = void $ runStepM $ do
     run $ cmd "uname" ["-a"]
     run $ sh "dmesg" .| sh "uniq" .| sh "wc"
 
+    run $ sh "dmesg" .| sh "head -1"
+
+    liftIO $ putStrLn "Waiting..."
     waitFinished p
 
     liftIO $ putStrLn "End"
