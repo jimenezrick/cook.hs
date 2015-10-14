@@ -9,6 +9,8 @@ module Deploy where
 import Data.Text.Lazy
 import qualified Data.Text.Lazy.IO as T
 
+import Control.Applicative
+
 import Control.Exception
 import Control.Monad.IO.Class
 import GHC.IO.Handle
@@ -31,41 +33,45 @@ import Template
 
 type Process = (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
 
+type ProcessBackground a = (ProcessHandle, Step a)
+
+-- TODO: Use monad writer to trace execution
 newtype StepM a = StepM {
-    -- TODO: trace mode, record commands executed, display if error code
-    unStepM :: IO (a, Maybe Process)
+    unStepM :: IO (a, Maybe (Process, Step a))
   } deriving Functor
 
-instance Applicative StepM where
+instance Applicative (StepM) where
     pure = liftIO . return
     StepM mf <*> StepM ma = StepM $ do
         (f, _) <- mf
         (a, p) <- ma
-        return $ (f a, p)
+        return (f a, f `fmap3` p)
+      where fmap3 = fmap . fmap . fmap
 
-instance Monad StepM where
+instance Monad (StepM) where
     s >>= f = StepM $ runStepM s >>= unStepM . f
 
-instance MonadIO StepM where
-    liftIO ma = StepM $ ma >>= return . flip (,) Nothing
+instance MonadIO (StepM) where
+    liftIO ma = StepM $ ma >>= \a -> return (a, Nothing)
 
 runStepM :: StepM a -> IO a
 runStepM (StepM ma) = do
     (a, p) <- ma
     case p of
-        Just (_, _, _, h) -> do exit <- waitForProcess h
-                                case exit of
-                                    ExitSuccess      -> return a
-                                    ExitFailure code -> throwIO $ ProcessFailure code
+        Just ((_, _, _, h), s) -> do
+            exit <- waitForProcess h
+            case exit of
+                ExitSuccess      -> return a
+                ExitFailure code -> throwIO $ ProcessFailure s code
         Nothing -> return a
 
 
 
 
-data ProcessFailure = ProcessFailure Int deriving Typeable
+data ProcessFailure where ProcessFailure :: Step a -> Int -> ProcessFailure deriving Typeable
 
 instance Show ProcessFailure where
-    show (ProcessFailure code) = printf "Error: process failed with exit code %d" code
+    show (ProcessFailure step code) = printf "Error: %s failed with exit code %d" (show step) code
 
 instance Exception ProcessFailure
 
@@ -86,11 +92,14 @@ instance Exception ProcessFailure
 --XXX useTemplate (Templ src dst) = liftIO $ useTemplate (toTemplate src :: Template a) dst >> return Nothing
 
 data Step a where
+                                                                           -- (Process -> Step a -> IO a)
     Cmd        :: FilePath -> [String] -> (CreateProcess -> CreateProcess) -> (Process -> IO a) -> Step a
     Sh         :: String -> (CreateProcess -> CreateProcess) -> (Process -> IO a) -> Step a
     Pipe       :: Step a -> Step b -> Step b
-    Background :: Step a -> Step ProcessHandle
+    Background :: Step a -> Step (ProcessBackground a)
     {- TODO: Templ :: (Data a, Typeable a, Generic a, FromJSON a) => FilePath -> FilePath -> Step a-}
+
+instance Functor Step -- XXX
 
 instance Show (Step a) where
     show (Cmd cmd args _ _) = printf "Cmd %s %s" (show cmd) (show args)
@@ -114,14 +123,14 @@ producer .| consumer | Background _ <- producer  = error "(.|): background step 
                      | otherwise                 = Pipe producer consumer
 
 run :: Step a -> StepM a
-run (Cmd cmd args fproc fa) = StepM $ do
+run step@(Cmd cmd args fproc fa) = StepM $ do
     p <- createProcess $ fproc $ proc cmd args
     a <- fa p
-    return (a, Just p)
-run (Sh script fproc fa) = StepM $ do
+    return (a, Just (p, step))
+run step@(Sh script fproc fa) = StepM $ do
     p <- createProcess $ fproc $ shell script
     a <- fa p
-    return (a, Just p)
+    return (a, Just (p, step))
 run (Pipe cons prod)  = runPipe cons prod
 run (Background step) = runInBackground step
 
@@ -131,18 +140,18 @@ runPipe producer consumer = do
     (ho, _) <- liftIO ma
     run $ withInHandle ho consumer
 
-runInBackground :: Step a -> StepM ProcessHandle
+runInBackground :: Step a -> StepM (ProcessBackground a)
 runInBackground step = do
     let (StepM ma) = run step
-    (_, Just (_, _, _, hp)) <- liftIO ma
-    return hp
+    (_, Just ((_, _, _, hp), s)) <- liftIO ma
+    return (hp, s)
 
-waitFinished :: ProcessHandle -> StepM ()
-waitFinished proc = do
+waitFinished :: ProcessBackground a -> StepM ()
+waitFinished (proc, step) = do
     exit <- liftIO $ waitForProcess proc
     case exit of
         ExitSuccess      -> return ()
-        ExitFailure code -> liftIO $ throwIO $ ProcessFailure code
+        ExitFailure code -> liftIO $ throwIO $ ProcessFailure step code
 
 withProc :: (CreateProcess -> CreateProcess) -> Step a -> Step a
 withProc fproc (Cmd cmd args fproc' fa) = Cmd cmd args (fproc . fproc') fa
@@ -163,7 +172,7 @@ withOutPipe = withProc (\p -> p { std_out = CreatePipe }) . withResult (\(_, Jus
 withOutText :: Step a -> Step Text
 withOutText = withResult (\(_, Just hout, _, _) -> T.hGetContents hout) . withOutPipe
 
-inBackground :: Step a -> Step ProcessHandle
+inBackground :: Step a -> Step (ProcessBackground a)
 inBackground (Background _) = error "inBackground: step already marked as background"
 inBackground step           = Background step
 
