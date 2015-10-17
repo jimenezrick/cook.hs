@@ -23,7 +23,6 @@ import GHC.Generics
 import Data.Yaml
 
 import Data.Tree
-import Control.Monad.Reader
 import System.Exit
 import System.Directory
 import System.FilePath
@@ -35,7 +34,9 @@ type Process = (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
 
 type ProcessBackground a = (ProcessHandle, Step a)
 
--- TODO: Use monad writer to trace execution
+-- TODO: ExceptT in Trace.hs
+-- run :: Step a -> StepM (Either code a)
+-- FIXME: Don't wait in the bind operator, instead look at the Left value
 newtype StepM a = StepM {
     unStepM :: IO (a, Maybe (Process, Step a))
   } deriving Functor
@@ -54,6 +55,7 @@ instance Monad (StepM) where
 instance MonadIO (StepM) where
     liftIO ma = StepM $ ma >>= \a -> return (a, Nothing)
 
+-- TODO: (NOT Either here as well) `a' is OK
 runStepM :: StepM a -> IO a
 runStepM (StepM ma) = do
     (a, p) <- ma
@@ -103,6 +105,7 @@ instance Functor Step -- XXX
 
 instance Show (Step a) where
     show (Cmd cmd args _ _) = printf "Cmd %s %s" (show cmd) (show args)
+    show (Sh script _ _) = printf "Sh %s" (show script)
     -- TODO: rest
 
 cmd :: FilePath -> [String] -> Step ()

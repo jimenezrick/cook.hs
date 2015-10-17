@@ -3,6 +3,8 @@
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE ScopedTypeVariables      #-}
 
+import Control.Monad.State
+import Control.Monad.Except
 import Control.Monad.IO.Class
 import System.Process
 
@@ -15,6 +17,7 @@ import Data.Yaml
 import GHC.Generics
 
 import Deploy
+import qualified Trace
 
 data Ctx = Ctx { foo :: String
                , bar :: Int
@@ -24,7 +27,15 @@ data Ctx = Ctx { foo :: String
 instance FromJSON Ctx
 
 main :: IO ()
-main = void $ runStepM $ do
+main = do
+    res <- runStepM $ flip runStateT [] $ runExceptT $ do
+        Trace.run $ sh "echo Hello"
+        Trace.run $ sh "false"
+        Trace.run $ sh "echo Bye"
+    print res
+
+main2 :: IO ()
+main2 = void $ runStepM $ do
     liftIO $ putStrLn "Start"
 
     run $ cmd_ "false"
