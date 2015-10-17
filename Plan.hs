@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Plan where
 
 import Control.Monad.Except
@@ -5,8 +7,9 @@ import Control.Monad.State
 import Data.Text.Lazy (Text, empty)
 
 import System.Exit
+import System.FilePath
 import System.IO
-import System.Process (CreateProcess)
+import System.Process (CreateProcess (..))
 import Text.Printf
 
 import qualified Data.Text.Lazy.IO as T
@@ -21,7 +24,7 @@ type Ctx = (Cwd, Trace)
 
 type Code = Int
 
-type Plan a = ExceptT (Trace, Code, a) (StateT Ctx IO) a
+type Plan = ExceptT (Trace, Code) (StateT Ctx IO)
 
 data Step = Proc FilePath [String]
           | Shell String
@@ -37,8 +40,18 @@ proc prog args = Proc prog args
 sh :: String -> Step
 sh cmd = Shell cmd
 
-trace :: Step -> StateT Ctx IO ()
-trace step = modify $ fmap $ (step:)
+-- FUCKME
+-- FIXME: we loose the trace here!
+withCwd :: FilePath -> Plan a -> Plan a
+withCwd dir plan = withStateT (chdir dir) plan
+  where chdir dir | isAbsolute dir = \(_, trace) -> (Just dir, trace)
+                  | isRelative dir = \(cwd, trace) -> ((</> dir) <$> cwd, trace)
+
+cwdir :: Plan (Maybe FilePath)
+cwdir = gets fst
+
+trace :: Step -> Plan ()
+trace step = modify $ fmap (step:)
 
 run :: Step -> Plan ()
 run step@(Proc prog args) = runWith step $ P.proc prog args
@@ -46,14 +59,15 @@ run step@(Shell cmd)      = runWith step $ P.shell cmd
 
 runWith :: Step -> CreateProcess -> Plan ()
 runWith step proc = do
-    lift $ trace step
-    (_, _, _, ph) <- liftIO $ P.createProcess proc
+    trace step
+    dir <- cwdir
+    (_, _, _, ph) <- liftIO $ P.createProcess proc { cwd = dir }
     exit <- liftIO $ P.waitForProcess ph
     case exit of
         ExitSuccess      -> return ()
         ExitFailure code -> do
             t <- snd <$> get
-            throwError (t, code, ())
+            throwError (t, code)
 
 runRead :: Step -> Plan (Text, Text)
 runRead step@(Proc prog args) = runReadWith step $ P.proc prog args
@@ -61,21 +75,23 @@ runRead step@(Shell cmd)      = runReadWith step $ P.shell cmd
 
 runReadWith :: Step -> CreateProcess -> Plan (Text, Text)
 runReadWith step proc = do
-    lift $ trace step
-    (exit, out, err) <- liftIO $ PT.readCreateProcessWithExitCode proc empty
+    trace step
+    dir <- cwdir
+    (exit, out, err) <- liftIO $ PT.readCreateProcessWithExitCode proc {cwd = dir } empty
     case exit of
         ExitSuccess      -> return (out, err)
         ExitFailure code -> do
             t <- snd <$> get
-            throwError (t, code, (out, err))
+            throwError (t, code)
 
 runPlan :: Plan a -> IO ()
 runPlan plan = do
     r <- flip evalStateT (Nothing, mempty) $ runExceptT plan
     case r of
-        Left (trace, code, a) -> do
+        Left (trace, code) -> do
             printTrace trace
-            printf "Process exited with code %d\n" code
+            printf "Process exited with code %d\n" code -- TODO: Show CWD
+        Right _ -> hPutStrLn stderr "Plan successful"
 
 printTrace :: Trace -> IO ()
 printTrace (err:normal) = do
@@ -91,6 +107,7 @@ main = do
     runPlan $ do
         (o2, _) <- foo
         liftIO $ print o2
+        run $ sh "pwd"
 
         (o, _) <- runRead $ sh "false"
         {-(o, _) <- runRead $ cmd "false" []-}
@@ -101,9 +118,7 @@ main = do
 
 foo :: Plan (Text, Text)
 foo = do
-    runRead $ proc "true" []
-    runRead $ proc "echo" ["xxx"]
-
--- TODO:
--- cd $ do
---    something
+    withCwd "/" $ do
+        run $ sh "pwd"
+        runRead $ proc "true" []
+        runRead $ proc "echo" ["xxx"]
