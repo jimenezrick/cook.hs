@@ -1,8 +1,17 @@
-module Plan where
+module Plan (
+    proc
+  , proc'
+  , sh
 
---
--- TODO: Exports
---
+  , withCd
+
+  , run
+  , runWith
+  , runRead
+  , runReadWith
+
+  , runPlan
+  ) where
 
 import Control.Monad.Except
 import Control.Monad.Morph
