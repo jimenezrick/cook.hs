@@ -38,10 +38,6 @@ type Code = Int
 
 type Plan = ExceptT (Trace, Code) (StateT Ctx IO)
 
---
--- TODO: data Pipe = Pipe Step Pipe
---
-
 data Step = Proc FilePath [String]
           | Shell String
 
