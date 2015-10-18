@@ -1,9 +1,8 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 module Plan where
 
 import Control.Monad.Except
 import Control.Monad.State
+import Control.Monad.Morph
 import Data.Text.Lazy (Text, empty)
 
 import System.Exit
@@ -40,10 +39,15 @@ proc prog args = Proc prog args
 sh :: String -> Step
 sh cmd = Shell cmd
 
--- FUCKME
--- FIXME: we loose the trace here!
-withCwd :: FilePath -> Plan a -> Plan a
-withCwd dir plan = withStateT (chdir dir) plan
+withCd :: FilePath -> Plan a -> Plan a
+withCd dir plan = do
+    cwd <- gets fst
+    (trace, a) <- hoist (withStateT $ chdir dir) $ do
+        a <- plan
+        trace <- gets snd
+        return (trace, a)
+    put (cwd, trace)
+    return a
   where chdir dir | isAbsolute dir = \(_, trace) -> (Just dir, trace)
                   | isRelative dir = \(cwd, trace) -> ((</> dir) <$> cwd, trace)
 
@@ -95,12 +99,9 @@ runPlan plan = do
 
 printTrace :: Trace -> IO ()
 printTrace (err:normal) = do
-    putLine
-    hPutStrLn stderr "Error executing plan:"
-    putLine
-    mapM_ (hPutStrLn stderr . ("   " ++) . show) $ reverse $ take 10 normal
-    hPutStrLn stderr $ "-> " ++ show err
-  where putLine = hPutStrLn stderr $ replicate 70 '-'
+    hPutStrLn stderr "Error executing plan - trace:"
+    mapM_ (hPutStrLn stderr . ("  " ++) . show) $ reverse $ take 10 normal
+    hPutStrLn stderr $ "> " ++ show err
 
 main :: IO ()
 main = do
@@ -118,7 +119,7 @@ main = do
 
 foo :: Plan (Text, Text)
 foo = do
-    withCwd "/" $ do
+    withCd "/" $ do
         run $ sh "pwd"
         runRead $ proc "true" []
         runRead $ proc "echo" ["xxx"]
