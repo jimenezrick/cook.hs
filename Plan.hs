@@ -1,10 +1,14 @@
 module Plan where
 
-import Control.Monad.Except
-import Control.Monad.State
-import Control.Monad.Morph
-import Data.Text.Lazy (Text, empty)
+--
+-- TODO: Exports
+--
 
+import Control.Monad.Except
+import Control.Monad.Morph
+import Control.Monad.State
+import Data.Text.Lazy (Text, empty)
+import System.Directory
 import System.Exit
 import System.FilePath
 import System.IO
@@ -15,111 +19,131 @@ import qualified Data.Text.Lazy.IO as T
 import qualified System.Process as P
 import qualified System.Process.Text.Lazy as PT
 
-type Trace = [Step]
-
 type Cwd = Maybe FilePath
+
+type Trace = [Step]
 
 type Ctx = (Cwd, Trace)
 
 type Code = Int
 
-type Plan = ExceptT (Trace, Code) (StateT Ctx IO)
+type Plan = ExceptT (Trace, FilePath, Code) (StateT Ctx IO)
+
+--
+-- TODO: data Pipe = Pipe Step Pipe
+--
 
 data Step = Proc FilePath [String]
           | Shell String
-          -- TODO: Pipe (in a different data type)
 
 instance Show Step where
-    show (Proc prog args) = printf "Proc %s %s" prog (unwords args)
-    show (Shell cmd) = printf "Proc %s" cmd
+    show (Proc prog args) = printf "process: %s %s" prog (unwords args)
+    show (Shell cmd)      = printf "shell: %s" cmd
 
 proc :: FilePath -> [String] -> Step
 proc prog args = Proc prog args
+
+proc' :: FilePath -> Step
+proc' prog = Proc prog []
 
 sh :: String -> Step
 sh cmd = Shell cmd
 
 withCd :: FilePath -> Plan a -> Plan a
 withCd dir plan = do
-    cwd <- gets fst
-    (trace, a) <- hoist (withStateT $ chdir dir) $ do
+    d <- cwdir
+    (t, a) <- hoist (withStateT $ chdir dir) $ do
         a <- plan
-        trace <- gets snd
-        return (trace, a)
-    put (cwd, trace)
+        t <- ctrace
+        return (t, a)
+    put (d, t)
     return a
-  where chdir dir | isAbsolute dir = \(_, trace) -> (Just dir, trace)
-                  | isRelative dir = \(cwd, trace) -> ((</> dir) <$> cwd, trace)
+  where chdir to | isAbsolute to = \(_, t) -> (Just to, t)
+                 | otherwise     = \(d, t) -> ((</> to) <$> d, t)
 
 cwdir :: Plan (Maybe FilePath)
 cwdir = gets fst
 
+-- FIXME: mkAbsolute with CWD
+absoluteCwd :: Plan FilePath
+absoluteCwd = do
+    d <- cwdir
+    case d of
+        Nothing  -> liftIO getCurrentDirectory
+        Just dir -> return dir
+
 trace :: Step -> Plan ()
 trace step = modify $ fmap (step:)
 
-run :: Step -> Plan ()
-run step@(Proc prog args) = runWith step $ P.proc prog args
-run step@(Shell cmd)      = runWith step $ P.shell cmd
+ctrace :: Plan Trace
+ctrace = gets snd
 
-runWith :: Step -> CreateProcess -> Plan ()
-runWith step proc = do
-    trace step
+run :: Step -> Plan ()
+run step@(Proc prog args) = trace step >> (runWith $ P.proc prog args)
+run step@(Shell cmd)      = trace step >> (runWith $ P.shell cmd)
+
+runWith :: CreateProcess -> Plan ()
+runWith p = do
     dir <- cwdir
-    (_, _, _, ph) <- liftIO $ P.createProcess proc { cwd = dir }
+    (_, _, _, ph) <- liftIO $ P.createProcess p { cwd = dir }
     exit <- liftIO $ P.waitForProcess ph
     case exit of
-        ExitSuccess      -> return ()
-        ExitFailure code -> do
-            t <- snd <$> get
-            throwError (t, code)
+        ExitSuccess   -> return ()
+        ExitFailure c -> do
+            t <- ctrace
+            d <- absoluteCwd
+            throwError (t, d, c)
 
 runRead :: Step -> Plan (Text, Text)
-runRead step@(Proc prog args) = runReadWith step $ P.proc prog args
-runRead step@(Shell cmd)      = runReadWith step $ P.shell cmd
+runRead step@(Proc prog args) = trace step >> (runReadWith $ P.proc prog args)
+runRead step@(Shell cmd)      = trace step >> (runReadWith $ P.shell cmd)
 
-runReadWith :: Step -> CreateProcess -> Plan (Text, Text)
-runReadWith step proc = do
-    trace step
+runReadWith :: CreateProcess -> Plan (Text, Text)
+runReadWith p = do
     dir <- cwdir
-    (exit, out, err) <- liftIO $ PT.readCreateProcessWithExitCode proc {cwd = dir } empty
+    (exit, out, err) <- liftIO $ PT.readCreateProcessWithExitCode p {cwd = dir } empty
     case exit of
-        ExitSuccess      -> return (out, err)
-        ExitFailure code -> do
-            t <- snd <$> get
-            throwError (t, code)
+        ExitSuccess   -> return (out, err)
+        ExitFailure c -> do
+            t <- ctrace
+            d <- absoluteCwd
+            throwError (t, d, c)
 
 runPlan :: Plan a -> IO ()
 runPlan plan = do
     r <- flip evalStateT (Nothing, mempty) $ runExceptT plan
     case r of
-        Left (trace, code) -> do
-            printTrace trace
-            printf "Process exited with code %d\n" code -- TODO: Show CWD
+        Left (trc, dir, code) -> do
+            printTrace trc
+            printf "Process exited with code %d in %s\n" code dir
         Right _ -> hPutStrLn stderr "Plan successful"
 
 printTrace :: Trace -> IO ()
-printTrace (err:normal) = do
-    hPutStrLn stderr "Error executing plan - trace:"
-    mapM_ (hPutStrLn stderr . ("  " ++) . show) $ reverse $ take 10 normal
-    hPutStrLn stderr $ "> " ++ show err
+printTrace (failed:prev) = do
+    hPutStrLn stderr "Error executing plan:"
+    mapM_ (hPutStrLn stderr . ("  " ++) . show) $ reverse $ take 10 prev
+    hPutStrLn stderr $ "> " ++ show failed
+printTrace [] = error "Plan.printTrace: empty trace"
 
+--------------------------------------------------------------------------------
 main :: IO ()
 main = do
     runPlan $ do
-        (o2, _) <- foo
-        liftIO $ print o2
+        (o, _) <- foo
+        liftIO $ print o
         run $ sh "pwd"
 
-        (o, _) <- runRead $ sh "false"
-        {-(o, _) <- runRead $ cmd "false" []-}
-        liftIO $ T.putStr o
-        (o, _) <- runRead $ proc "echo" ["hello"]
-        liftIO $ T.putStr o
+        withCd ".." $ do
+            (o2, _) <- runRead $ sh "false"
+            liftIO $ T.putStr o2
+
+        (o3, _) <- runRead $ proc "echo" ["hello"]
+        liftIO $ T.putStr o3
         runRead $ proc "echo" ["exit"]
 
 foo :: Plan (Text, Text)
 foo = do
     withCd "/" $ do
-        run $ sh "pwd"
-        runRead $ proc "true" []
-        runRead $ proc "echo" ["xxx"]
+        run $ proc' "pwd"
+        run $ proc' "true"
+        runRead $ sh "echo xxx"
