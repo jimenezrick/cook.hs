@@ -1,5 +1,7 @@
 module Plan (
-    proc
+    Plan
+
+  , proc
   , proc'
   , sh
 
@@ -24,7 +26,6 @@ import System.IO
 import System.Process (CreateProcess (..))
 import Text.Printf
 
-import qualified Data.Text.Lazy.IO as T
 import qualified System.Process as P
 import qualified System.Process.Text.Lazy as PT
 
@@ -136,25 +137,3 @@ printTrace (failed:prev) = do
     hPutStrLn stderr $ "> " ++ fmt failed
   where fmt (step, trc) = printf "%s (from %s)" (show step) trc
 printTrace [] = error "Plan.printTrace: empty trace"
-
---------------------------------------------------------------------------------
-main :: IO ()
-main = runPlan $ do
-    (o, _) <- foo
-    liftIO $ print o
-    run $ sh "pwd"
-
-    withCd ".." $ do
-        run $ sh "pwd"
-        run $ sh "echo $USER2"
-
-    (o3, _) <- runRead $ proc "echo" ["hello", "$USER"]
-    liftIO $ T.putStr o3
-    runRead $ proc "echo" ["exit"]
-
-foo :: Plan (Text, Text)
-foo = withCd "/" $ do
-    run $ proc' "pwd"
-    run $ proc' "true"
-    run $ sh "echo $USER"
-    runRead $ sh "echo xxx"
