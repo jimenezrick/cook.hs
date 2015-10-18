@@ -5,8 +5,9 @@
 --
 
 import Data.Default
+import Data.Foldable
 
-import Data.Text
+import Data.Text (Text)
 import System.Directory
 import System.FilePath
 import System.Posix.Files
@@ -30,9 +31,9 @@ defAttrs :: Attrs
 defAttrs = def
 
 apply :: FilePath -> FileMap -> IO ()
-apply base map = do
-    applyFile base map
-    applyAttrs base map
+apply base filemap = do
+    applyFile base filemap
+    applyAttrs base filemap
 
 applyFile :: FilePath -> FileMap -> IO ()
 applyFile base (DirEmpty name _)   = mkdir (base </> name)
@@ -41,8 +42,8 @@ applyFile base (Dir name _ submap) = do
     mapM_ (apply $ base </> name) submap
 applyFile base (File name (Content txt) _) = T.writeFile (base </> name) txt
 applyFile base (File name (Copy from) _)   = copyFile from (base </> name)
-applyFile _ (File _ (Template) _)          = undefined
-applyFile base (Mode name (perms, owner))   = return ()
+applyFile _ (File _ Template _)            = undefined -- TODO
+applyFile _ (Mode _ _)                     = return ()
 
 applyAttrs :: FilePath -> FileMap -> IO ()
 applyAttrs base (DirEmpty name attrs)   = useAttrs (base </> name) attrs
@@ -51,19 +52,14 @@ applyAttrs base (Dir name attrs submap) = do
     mapM_ (apply $ base </> name) submap
 applyAttrs base (File name (Content _) attrs) = useAttrs (base </> name) attrs
 applyAttrs base (File name (Copy _) attrs)    = useAttrs (base </> name) attrs
-applyAttrs base (File name (Template) attrs)   = useAttrs (base </> name) attrs
-applyAttrs base (Mode name attrs)              = useAttrs (base </> name) attrs
+applyAttrs base (File name Template attrs)    = useAttrs (base </> name) attrs
+applyAttrs base (Mode name attrs)             = useAttrs (base </> name) attrs
 
 useAttrs :: FilePath -> Attrs -> IO ()
-useAttrs path (Nothing, Nothing) = return ()
-useAttrs path (mode, perm)       = do
-    case mode of
-        Nothing -> return ()
-        Just m  -> chmod path m
-    case perm of
-        Nothing     -> return ()
-        Just (u, g) ->chown path u g
-
+useAttrs _ (Nothing, Nothing) = return ()
+useAttrs path (mode, perm)    = do
+    forM_ mode (chmod path)
+    forM_ perm (uncurry $ chown path)
 
 mkdir :: FilePath -> IO ()
 mkdir = createDirectoryIfMissing True
@@ -78,6 +74,7 @@ chown path user group = do
     gentry <- getGroupEntryForName group
     setOwnerAndGroup path (userID uentry) (groupID gentry)
 
+-------------------------------------------------------------------------
 main :: IO ()
 main = mapM_ (apply ".") [
     Dir "deploy/foo" defAttrs [
