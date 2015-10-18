@@ -15,6 +15,10 @@ module Plan (
   , runPlan
   ) where
 
+--
+-- TODO: withSudo, withSudoUser
+--
+
 import Control.Monad.Except
 import Control.Monad.Morph
 import Control.Monad.State
