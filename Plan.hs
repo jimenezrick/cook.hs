@@ -88,9 +88,12 @@ trace step = do
 ctrace :: Plan Trace
 ctrace = gets snd
 
+buildCmd :: String -> String
+buildCmd cmd = "set -o errexit -o nounset -o pipefail;" ++ cmd
+
 run :: Step -> Plan ()
 run step@(Proc prog args) = trace step >> runWith (P.proc prog args)
-run step@(Shell cmd)      = trace step >> runWith (P.shell cmd)
+run step@(Shell cmd)      = trace step >> runWith (P.shell $ buildCmd cmd)
 
 runWith :: CreateProcess -> Plan ()
 runWith p = do
@@ -105,7 +108,7 @@ runWith p = do
 
 runRead :: Step -> Plan (Text, Text)
 runRead step@(Proc prog args) = trace step >> runReadWith (P.proc prog args)
-runRead step@(Shell cmd)      = trace step >> runReadWith (P.shell cmd)
+runRead step@(Shell cmd)      = trace step >> runReadWith (P.shell $ buildCmd cmd)
 
 runReadWith :: CreateProcess -> Plan (Text, Text)
 runReadWith p = do
@@ -143,10 +146,9 @@ main = runPlan $ do
 
     withCd ".." $ do
         run $ sh "pwd"
-        (o2, _) <- runRead $ sh "false"
-        liftIO $ T.putStr o2
+        run $ sh "echo $USER2"
 
-    (o3, _) <- runRead $ proc "echo" ["hello"]
+    (o3, _) <- runRead $ proc "echo" ["hello", "$USER"]
     liftIO $ T.putStr o3
     runRead $ proc "echo" ["exit"]
 
@@ -154,4 +156,5 @@ foo :: Plan (Text, Text)
 foo = withCd "/" $ do
     run $ proc' "pwd"
     run $ proc' "true"
+    run $ sh "echo $USER"
     runRead $ sh "echo xxx"
