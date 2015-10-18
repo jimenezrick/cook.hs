@@ -41,13 +41,13 @@ instance Show Step where
     show (Shell cmd)      = printf "shell: %s" cmd
 
 proc :: FilePath -> [String] -> Step
-proc prog args = Proc prog args
+proc = Proc
 
 proc' :: FilePath -> Step
 proc' prog = Proc prog []
 
 sh :: String -> Step
-sh cmd = Shell cmd
+sh = Shell
 
 withCd :: FilePath -> Plan a -> Plan a
 withCd dir plan = do
@@ -84,8 +84,8 @@ ctrace :: Plan Trace
 ctrace = gets snd
 
 run :: Step -> Plan ()
-run step@(Proc prog args) = trace step >> (runWith $ P.proc prog args)
-run step@(Shell cmd)      = trace step >> (runWith $ P.shell cmd)
+run step@(Proc prog args) = trace step >> runWith (P.proc prog args)
+run step@(Shell cmd)      = trace step >> runWith (P.shell cmd)
 
 runWith :: CreateProcess -> Plan ()
 runWith p = do
@@ -99,8 +99,8 @@ runWith p = do
             throwError (t, c)
 
 runRead :: Step -> Plan (Text, Text)
-runRead step@(Proc prog args) = trace step >> (runReadWith $ P.proc prog args)
-runRead step@(Shell cmd)      = trace step >> (runReadWith $ P.shell cmd)
+runRead step@(Proc prog args) = trace step >> runReadWith (P.proc prog args)
+runRead step@(Shell cmd)      = trace step >> runReadWith (P.shell cmd)
 
 runReadWith :: CreateProcess -> Plan (Text, Text)
 runReadWith p = do
@@ -131,24 +131,22 @@ printTrace [] = error "Plan.printTrace: empty trace"
 
 --------------------------------------------------------------------------------
 main :: IO ()
-main = do
-    runPlan $ do
-        (o, _) <- foo
-        liftIO $ print o
+main = runPlan $ do
+    (o, _) <- foo
+    liftIO $ print o
+    run $ sh "pwd"
+
+    withCd ".." $ do
         run $ sh "pwd"
+        (o2, _) <- runRead $ sh "false"
+        liftIO $ T.putStr o2
 
-        withCd ".." $ do
-            run $ sh "pwd"
-            (o2, _) <- runRead $ sh "false"
-            liftIO $ T.putStr o2
-
-        (o3, _) <- runRead $ proc "echo" ["hello"]
-        liftIO $ T.putStr o3
-        runRead $ proc "echo" ["exit"]
+    (o3, _) <- runRead $ proc "echo" ["hello"]
+    liftIO $ T.putStr o3
+    runRead $ proc "echo" ["exit"]
 
 foo :: Plan (Text, Text)
-foo = do
-    withCd "/" $ do
-        run $ proc' "pwd"
-        run $ proc' "true"
-        runRead $ sh "echo xxx"
+foo = withCd "/" $ do
+    run $ proc' "pwd"
+    run $ proc' "true"
+    runRead $ sh "echo xxx"
