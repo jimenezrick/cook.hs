@@ -59,18 +59,21 @@ withCd dir plan = do
     put (d, t)
     return a
   where chdir to | isAbsolute to = \(_, t) -> (Just to, t)
-                 | otherwise     = \(d, t) -> ((</> to) <$> d, t)
+                 | otherwise     = \(d, t) ->
+                     case d of
+                         Nothing -> (Just to, t)
+                         Just d' -> (Just $ d' </> to, t)
 
 cwdir :: Plan (Maybe FilePath)
 cwdir = gets fst
 
--- FIXME: mkAbsolute with CWD
 absoluteCwd :: Plan FilePath
 absoluteCwd = do
     d <- cwdir
     case d of
-        Nothing  -> liftIO getCurrentDirectory
-        Just dir -> return dir
+        Nothing                   -> liftIO getCurrentDirectory
+        Just dir | isAbsolute dir -> return dir
+                 | otherwise      -> liftIO $ canonicalizePath dir
 
 trace :: Step -> Plan ()
 trace step = do
@@ -135,6 +138,7 @@ main = do
         run $ sh "pwd"
 
         withCd ".." $ do
+            run $ sh "pwd"
             (o2, _) <- runRead $ sh "false"
             liftIO $ T.putStr o2
 
