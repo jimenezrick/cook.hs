@@ -21,13 +21,13 @@ import qualified System.Process.Text.Lazy as PT
 
 type Cwd = Maybe FilePath
 
-type Trace = [Step]
+type Trace = [(Step, FilePath)]
 
 type Ctx = (Cwd, Trace)
 
 type Code = Int
 
-type Plan = ExceptT (Trace, FilePath, Code) (StateT Ctx IO)
+type Plan = ExceptT (Trace, Code) (StateT Ctx IO)
 
 --
 -- TODO: data Pipe = Pipe Step Pipe
@@ -73,7 +73,9 @@ absoluteCwd = do
         Just dir -> return dir
 
 trace :: Step -> Plan ()
-trace step = modify $ fmap (step:)
+trace step = do
+    d <- absoluteCwd
+    modify $ fmap ((step, d):)
 
 ctrace :: Plan Trace
 ctrace = gets snd
@@ -91,8 +93,7 @@ runWith p = do
         ExitSuccess   -> return ()
         ExitFailure c -> do
             t <- ctrace
-            d <- absoluteCwd
-            throwError (t, d, c)
+            throwError (t, c)
 
 runRead :: Step -> Plan (Text, Text)
 runRead step@(Proc prog args) = trace step >> (runReadWith $ P.proc prog args)
@@ -106,23 +107,23 @@ runReadWith p = do
         ExitSuccess   -> return (out, err)
         ExitFailure c -> do
             t <- ctrace
-            d <- absoluteCwd
-            throwError (t, d, c)
+            throwError (t, c)
 
 runPlan :: Plan a -> IO ()
 runPlan plan = do
     r <- flip evalStateT (Nothing, mempty) $ runExceptT plan
     case r of
-        Left (trc, dir, code) -> do
-            printTrace trc
-            printf "Process exited with code %d in %s\n" code dir
+        Left (t, c) -> do
+            printTrace t
+            printf "Process exited with code %d\n" c
         Right _ -> hPutStrLn stderr "Plan successful"
 
 printTrace :: Trace -> IO ()
 printTrace (failed:prev) = do
     hPutStrLn stderr "Error executing plan:"
-    mapM_ (hPutStrLn stderr . ("  " ++) . show) $ reverse $ take 10 prev
-    hPutStrLn stderr $ "> " ++ show failed
+    mapM_ (hPutStrLn stderr . ("  " ++) . fmt) $ reverse $ take 10 prev
+    hPutStrLn stderr $ "> " ++ fmt failed
+  where fmt (step, trc) = printf "%s (from %s)" (show step) trc
 printTrace [] = error "Plan.printTrace: empty trace"
 
 --------------------------------------------------------------------------------
