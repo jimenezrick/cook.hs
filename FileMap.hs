@@ -1,6 +1,12 @@
 {-module FileMap where-}
 
 --
+-- TODO: Exports
+-- TODO: Review code
+-- TODO: Templates
+--
+
+--
 -- TODO: how to set sudo user?
 --
 

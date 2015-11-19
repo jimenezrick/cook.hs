@@ -74,7 +74,8 @@ loadConfWithDef withDef path = do
         Left ex -> error $ prettyPrintParseException ex
         Right v | Nothing <- withDef -> do traceShowM v
                                            return $ mkGenericContext (v :: a)
-                | Just d <- withDef -> do traceShowM v
-                                          return $ (mkGenericContext (v :: a)) `composeCtx` (mkGenericContext d)
+                | Just d <- withDef -> do
+                    traceShowM v
+                    return $ (mkGenericContext (v :: a)) `composeCtx` (mkGenericContext d)
   where conf  = hastacheConf $ takeDirectory path'
         path' = untag path
