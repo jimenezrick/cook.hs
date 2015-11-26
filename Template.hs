@@ -3,23 +3,24 @@
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Template where
+module Template (
+    Template
 
-import Data.Default
-import Data.Tagged
-
-import Data.Monoid
-
-import System.FilePath
-
-import GHC.Generics
-import Data.Yaml
+  , asTemplate
+  , useTemplate
+  ) where
 
 import Data.Data
+import Data.Default
+import Data.Monoid
+import Data.Tagged
+import Data.Yaml
+import GHC.Generics
+import System.FilePath
 import Text.Hastache
 import Text.Hastache.Context
 
-import qualified Data.Text.Lazy.IO as T
+import qualified Data.Text.Lazy.IO as Text
 
 type Template a = Tagged a FilePath
 
@@ -33,9 +34,23 @@ useTemplate src dst = do
     case vals of
         Left ex -> error $ prettyPrintParseException ex
         Right b -> let ctx = mkGenericContext (b :: a)
-                   in hastacheFile conf src' ctx >>= T.writeFile dst
+                   in hastacheFile conf src' ctx >>= Text.writeFile dst
   where conf = hastacheConf $ takeDirectory src'
         src' = untag src
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 hastacheConf :: FilePath -> MuConfig IO
 hastacheConf tmplsPath = defaultConfig { muEscapeFunc = emptyEscape
@@ -73,17 +88,13 @@ loadConfWithDef withDef path = do
         path' = untag path
 
 --------------------------------------------------------
-
-data Foo = Foo {
-    foo  :: String
-  , bar   :: Int
-  , bur :: Int
-  } deriving (Data, Typeable, Generic)
-
-instance FromJSON Foo
-
-{-
- -main :: IO ()
- -main = do
- -    useTemplate (asTemplate "p.mustache" :: Template Foo) "p.out2"
- -}
+-- data Foo = Foo {
+--     foo  :: String
+--   , bar   :: Int
+--   , bur :: Int
+--   } deriving (Data, Typeable, Generic)
+-- 
+-- instance FromJSON Foo
+-- 
+-- main :: IO ()
+-- main = useTemplate (asTemplate "p.mustache" :: Template Foo) "p.out2"
