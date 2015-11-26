@@ -1,24 +1,21 @@
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE ScopedTypeVariables      #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Template where
 
-import Debug.Trace
-
 import Data.Default
 import Data.Tagged
+
+import Data.Monoid
 
 import System.FilePath
 
 import GHC.Generics
 import Data.Yaml
 
-import Control.Monad.IO.Class
 import Data.Data
-import Data.Text.Lazy
-import Data.Text.Lazy.IO as T
 import Text.Hastache
 import Text.Hastache.Context
 
@@ -26,18 +23,17 @@ import qualified Data.Text.Lazy.IO as T
 
 type Template a = Tagged a FilePath
 
-toTemplate :: FilePath -> Template a
-toTemplate = Tagged
+asTemplate :: FilePath -> Template a
+asTemplate = Tagged
 
-useTemplate :: forall a. (Data a, Typeable a, Generic a, FromJSON a, Show a)
+useTemplate :: forall a. (Data a, Typeable a, Generic a, FromJSON a)
             => Template a -> FilePath -> IO ()
 useTemplate src dst = do
     vals <- decodeFileEither $ src' -<.> "yaml"
     case vals of
         Left ex -> error $ prettyPrintParseException ex
-        Right b -> do traceShowM b
-                      let ctx = mkGenericContext (b :: a)
-                      hastacheFile conf src' ctx >>= T.writeFile dst
+        Right b -> let ctx = mkGenericContext (b :: a)
+                   in hastacheFile conf src' ctx >>= T.writeFile dst
   where conf = hastacheConf $ takeDirectory src'
         src' = untag src
 
@@ -51,31 +47,43 @@ data SystemConf = SystemConf {
     filesDir  :: FilePath
   , tmplDir   :: FilePath
   , configDir :: FilePath
-  } deriving (Show, Data, Typeable, Generic)
+  } deriving (Data, Typeable, Generic)
 
 instance Default SystemConf where
     def = SystemConf "files" "template" "config"
 
 instance FromJSON SystemConf
 
-loadConf :: forall a. (Default a, Data a, Typeable a, Generic a, FromJSON a, Show a)
+loadConf :: forall a. (Default a, Data a, Typeable a, Generic a, FromJSON a)
          => Template a -> IO (MuContext IO)
-loadConf = loadConfWithDef $ Just def
+loadConf = loadConfWithDef $ mkGenericContext (def :: a)
 
-loadConfNoDef :: forall a. (Data a, Typeable a, Generic a, FromJSON a, Show a)
+loadConfNoDef :: forall a. (Data a, Typeable a, Generic a, FromJSON a)
               => Template a -> IO (MuContext IO)
-loadConfNoDef = loadConfWithDef Nothing
+loadConfNoDef = loadConfWithDef mempty
 
-loadConfWithDef :: forall a. (Data a, Typeable a, Generic a, FromJSON a, Show a)
-         => Maybe a -> Template a -> IO (MuContext IO)
+loadConfWithDef :: forall a. (Data a, Typeable a, Generic a, FromJSON a)
+                => MuContext IO -> Template a -> IO (MuContext IO)
 loadConfWithDef withDef path = do
     vals <- decodeFileEither $ path' -<.> "yaml"
     case vals of
         Left ex -> error $ prettyPrintParseException ex
-        Right v | Nothing <- withDef -> do traceShowM v
-                                           return $ mkGenericContext (v :: a)
-                | Just d <- withDef -> do
-                    traceShowM v
-                    return $ (mkGenericContext (v :: a)) `composeCtx` (mkGenericContext d)
+        Right v -> return $ (mkGenericContext (v :: a)) <> withDef
   where conf  = hastacheConf $ takeDirectory path'
         path' = untag path
+
+--------------------------------------------------------
+
+data Foo = Foo {
+    foo  :: String
+  , bar   :: Int
+  , bur :: Int
+  } deriving (Data, Typeable, Generic)
+
+instance FromJSON Foo
+
+{-
+ -main :: IO ()
+ -main = do
+ -    useTemplate (asTemplate "p.mustache" :: Template Foo) "p.out2"
+ -}

@@ -1,69 +1,69 @@
-{-module FileMap where-}
+{-# LANGUAGE GADTs #-}
 
---
--- TODO: Exports
--- TODO: Review code
--- TODO: Templates
---
+module FileMap (
+    FileMap (..)
+  , Content (..)
 
---
--- TODO: how to set sudo user?
---
+  , defAttrs
+  , applyFileMap
+  ) where
 
+import Data.Aeson
+import Data.Data
 import Data.Default
 import Data.Foldable
-
 import Data.Text (Text)
+import GHC.Generics
 import System.Directory
 import System.FilePath
 import System.Posix.Files
 import System.Posix.Types
 import System.Posix.User
 
-import qualified Data.Text.IO as T
+import qualified Data.Text.IO as Text
+
+import qualified Template as T
 
 type Attrs = (Maybe FileMode, Maybe (String, String))
 
-data Content = Copy FilePath
-             | Template -- TODO
-             | Content Text
+data Content where
+    Copy     :: FilePath -> Content
+    Template :: (Data a, Typeable a, Generic a, FromJSON a) => T.Template a -> Content
+    Content  :: Text -> Content
 
 data FileMap = File FilePath Content Attrs
+             | Mode FilePath Attrs
              | Dir FilePath Attrs [FileMap]
              | DirEmpty FilePath Attrs
-             | Mode FilePath Attrs
 
 defAttrs :: Attrs
 defAttrs = def
 
-apply :: FilePath -> FileMap -> IO ()
-apply base filemap = do
+applyFileMap :: FilePath -> FileMap -> IO ()
+applyFileMap base filemap = do
     applyFile base filemap
     applyAttrs base filemap
 
 applyFile :: FilePath -> FileMap -> IO ()
-applyFile base (DirEmpty name _)   = mkdir (base </> name)
-applyFile base (Dir name _ submap) = do
+applyFile base (File name (Content txt) _)   = Text.writeFile (base </> name) txt
+applyFile base (File name (Copy src) _)      = copyFile src (base </> name)
+applyFile base (File name (Template tmpl) _) = T.useTemplate tmpl (base </> name)
+applyFile _ (Mode _ _)                       = return ()
+applyFile base (DirEmpty name _)             = mkdir (base </> name)
+applyFile base (Dir name _ submap)           = do
     mkdir (base </> name)
-    mapM_ (apply $ base </> name) submap
-applyFile base (File name (Content txt) _) = T.writeFile (base </> name) txt
-applyFile base (File name (Copy from) _)   = copyFile from (base </> name)
-applyFile _ (File _ Template _)            = undefined -- TODO
-applyFile _ (Mode _ _)                     = return ()
+    mapM_ (applyFileMap $ base </> name) submap
 
 applyAttrs :: FilePath -> FileMap -> IO ()
+applyAttrs base (File name _ attrs)     = useAttrs (base </> name) attrs
+applyAttrs base (Mode name attrs)       = useAttrs (base </> name) attrs
 applyAttrs base (DirEmpty name attrs)   = useAttrs (base </> name) attrs
 applyAttrs base (Dir name attrs submap) = do
     useAttrs (base </> name) attrs
-    mapM_ (apply $ base </> name) submap
-applyAttrs base (File name (Content _) attrs) = useAttrs (base </> name) attrs
-applyAttrs base (File name (Copy _) attrs)    = useAttrs (base </> name) attrs
-applyAttrs base (File name Template attrs)    = useAttrs (base </> name) attrs
-applyAttrs base (Mode name attrs)             = useAttrs (base </> name) attrs
+    mapM_ (applyFileMap $ base </> name) submap
 
 useAttrs :: FilePath -> Attrs -> IO ()
-useAttrs _ (Nothing, Nothing) = return ()
-useAttrs path (mode, perm)    = do
+useAttrs path (mode, perm) = do
     forM_ mode (chmod path)
     forM_ perm (uncurry $ chown path)
 
@@ -81,14 +81,15 @@ chown path user group = do
     setOwnerAndGroup path (userID uentry) (groupID gentry)
 
 -------------------------------------------------------------------------
-main :: IO ()
-main = mapM_ (apply ".") [
-    Dir "deploy/foo" defAttrs [
-        File "fstab" (Copy "/etc/fstab") defAttrs
-      , File "yyy" (Copy "/tmp/xxx") defAttrs
-      , File "mtab" (Copy "/etc/mtab") defAttrs
-      , DirEmpty "/tmp/fuuuuuuuuuur" (Just 0o0444, Nothing)
-      , Mode "/tmp/fuuuuuuuuuur" (Just 0o0444, Nothing)
-      ]
-  , DirEmpty "caca" defAttrs
-  ]
+-- main :: IO ()
+-- main = mapM_ (applyFileMap ".") [
+--     Dir "deploy/foo" defAttrs [
+--         File "fstab" (Copy "/etc/fstab") defAttrs
+--       , File "yyy" (Copy "/tmp/xxx") defAttrs
+--       , File "mtab" (Copy "/etc/mtab") defAttrs
+--       , DirEmpty "/tmp/fuuuuuuuuuur" (Just 0o0444, Nothing)
+--       , Mode "/tmp/fuuuuuuuuuur" (Just (0o0444), Just ("ricardo", "users"))
+--       , File "template" (Template (T.asTemplate "p.mustache" :: T.Template T.Foo)) defAttrs
+--       ]
+--   , DirEmpty "caca" defAttrs
+--   ]
