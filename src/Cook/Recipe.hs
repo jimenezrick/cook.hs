@@ -1,5 +1,6 @@
-module Plan (
-    Plan
+module Cook.Recipe (
+    Recipe
+  , Step
 
   , proc
   , proc'
@@ -12,7 +13,7 @@ module Plan (
   , runRead
   , runReadWith
 
-  , runPlan
+  , runRecipe
   ) where
 
 --
@@ -41,7 +42,7 @@ type Ctx = (Cwd, Trace)
 
 type Code = Int
 
-type Plan = ExceptT (Trace, Code) (StateT Ctx IO)
+type Recipe = ExceptT (Trace, Code) (StateT Ctx IO)
 
 data Step = Proc FilePath [String]
           | Shell String
@@ -59,11 +60,11 @@ proc' prog = Proc prog []
 sh :: String -> Step
 sh = Shell
 
-withCd :: FilePath -> Plan a -> Plan a
-withCd dir plan = do
+withCd :: FilePath -> Recipe a -> Recipe a
+withCd dir recipe = do
     d <- cwdir
     (t, a) <- hoist (withStateT $ chdir dir) $ do
-        a <- plan
+        a <- recipe
         t <- ctrace
         return (t, a)
     put (d, t)
@@ -74,10 +75,10 @@ withCd dir plan = do
                          Nothing -> (Just to, t)
                          Just d' -> (Just $ d' </> to, t)
 
-cwdir :: Plan (Maybe FilePath)
+cwdir :: Recipe (Maybe FilePath)
 cwdir = gets fst
 
-absoluteCwd :: Plan FilePath
+absoluteCwd :: Recipe FilePath
 absoluteCwd = do
     d <- cwdir
     case d of
@@ -85,22 +86,22 @@ absoluteCwd = do
         Just dir | isAbsolute dir -> return dir
                  | otherwise      -> liftIO $ canonicalizePath dir
 
-trace :: Step -> Plan ()
+trace :: Step -> Recipe ()
 trace step = do
     d <- absoluteCwd
     modify $ fmap ((step, d):)
 
-ctrace :: Plan Trace
+ctrace :: Recipe Trace
 ctrace = gets snd
 
 buildCmd :: String -> String
 buildCmd cmd = "set -o errexit -o nounset -o pipefail;" ++ cmd
 
-run :: Step -> Plan ()
+run :: Step -> Recipe ()
 run step@(Proc prog args) = trace step >> runWith (P.proc prog args)
 run step@(Shell cmd)      = trace step >> runWith (P.shell $ buildCmd cmd)
 
-runWith :: CreateProcess -> Plan ()
+runWith :: CreateProcess -> Recipe ()
 runWith p = do
     dir <- cwdir
     (_, _, _, ph) <- liftIO $ P.createProcess p { cwd = dir }
@@ -111,11 +112,11 @@ runWith p = do
             t <- ctrace
             throwError (t, c)
 
-runRead :: Step -> Plan (Text, Text)
+runRead :: Step -> Recipe (Text, Text)
 runRead step@(Proc prog args) = trace step >> runReadWith (P.proc prog args)
 runRead step@(Shell cmd)      = trace step >> runReadWith (P.shell $ buildCmd cmd)
 
-runReadWith :: CreateProcess -> Plan (Text, Text)
+runReadWith :: CreateProcess -> Recipe (Text, Text)
 runReadWith p = do
     dir <- cwdir
     (exit, out, err) <- liftIO $ PT.readCreateProcessWithExitCode p {cwd = dir } empty
@@ -125,19 +126,19 @@ runReadWith p = do
             t <- ctrace
             throwError (t, c)
 
-runPlan :: Plan a -> IO ()
-runPlan plan = do
-    r <- flip evalStateT (Nothing, mempty) $ runExceptT plan
+runRecipe :: Recipe a -> IO ()
+runRecipe recipe = do
+    r <- flip evalStateT (Nothing, mempty) $ runExceptT recipe
     case r of
         Left (t, c) -> do
             printTrace t
             printf "Process exited with code %d\n" c
-        Right _ -> hPutStrLn stderr "Plan successful"
+        Right _ -> hPutStrLn stderr "Recipe successful"
 
 printTrace :: Trace -> IO ()
 printTrace (failed:prev) = do
-    hPutStrLn stderr "Error executing plan:"
+    hPutStrLn stderr "Error in recipe:"
     mapM_ (hPutStrLn stderr . ("  " ++) . fmt) $ reverse $ take 10 prev
     hPutStrLn stderr $ "> " ++ fmt failed
   where fmt (step, trc) = printf "%s (from %s)" (show step) trc
-printTrace [] = error "Plan.printTrace: empty trace"
+printTrace [] = error "Recipe.printTrace: empty trace"

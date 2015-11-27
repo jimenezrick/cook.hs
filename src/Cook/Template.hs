@@ -1,9 +1,4 @@
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
-module Template (
+module Cook.Template (
     Template
 
   , asTemplate
@@ -52,6 +47,7 @@ useTemplate src dst = do
 
 
 
+--------------------------------------------------------
 hastacheConf :: FilePath -> MuConfig IO
 hastacheConf tmplsPath = defaultConfig { muEscapeFunc = emptyEscape
                                        , muTemplateFileExt = Just ".mustache"
