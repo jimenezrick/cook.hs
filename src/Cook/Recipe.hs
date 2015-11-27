@@ -14,6 +14,12 @@ module Cook.Recipe (
   , runReadWith
 
   , runRecipe
+
+  , F.FsTree (..)
+  , F.Content (..)
+
+  , F.defAttrs
+  , createFsTree
   ) where
 
 --
@@ -34,6 +40,8 @@ import Text.Printf
 import qualified System.Process as P
 import qualified System.Process.Text.Lazy as PT
 
+import qualified Cook.FsTree as F
+
 type Cwd = Maybe FilePath
 
 type Trace = [(Step, FilePath)]
@@ -50,6 +58,9 @@ data Step = Proc FilePath [String]
 instance Show Step where
     show (Proc prog args) = printf "process: %s %s" prog (unwords args)
     show (Shell cmd)      = printf "shell: %s" cmd
+
+createFsTree :: FilePath -> F.FsTree -> Recipe ()
+createFsTree base fstree = liftIO $ F.createFsTree base fstree
 
 proc :: FilePath -> [String] -> Step
 proc = Proc

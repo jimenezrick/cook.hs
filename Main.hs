@@ -1,4 +1,5 @@
-import Cook.Receipt
+import Cook.Recipe
 
-main = runPlan $ do
-    proc "ssh" ["buyvm.untroubled.be"]
+main :: IO ()
+main = runRecipe $ do
+    withCd "/tmp" $ run $ proc "ssh" ["buyvm.untroubled.be"]

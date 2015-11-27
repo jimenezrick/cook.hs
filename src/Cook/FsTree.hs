@@ -20,7 +20,7 @@ import System.Posix.User
 
 import qualified Data.Text.IO as Text
 
-import qualified Template as T
+import qualified Cook.Template as T
 
 type Attrs = (Maybe FileMode, Maybe (String, String))
 
