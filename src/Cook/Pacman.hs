@@ -6,11 +6,11 @@ module Cook.Pacman (
 
 import Cook.Recipe
 
-pacman :: [String] -> Step
-pacman args = proc "pacman" $ ["--noconfirm"] ++ args
+pacman :: [String] -> Recipe ()
+pacman args = run $ proc "pacman" $ ["--noconfirm"] ++ args
 
-upgradePackages :: Step
+upgradePackages :: Recipe ()
 upgradePackages = pacman ["-Syu"]
 
-installPackages :: [String] -> Step
+installPackages :: [String] -> Recipe ()
 installPackages pkgs = pacman $ ["--needed", "-S"] ++ pkgs

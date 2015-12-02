@@ -4,5 +4,5 @@ module Cook.Systemd (
 
 import Cook.Recipe
 
-enableService :: String -> Step
-enableService srv = proc "systemd" $ ["enable"] ++ [srv ++ ".service"]
+enableService :: String -> Recipe ()
+enableService srv = run $ proc "systemd" $ ["enable"] ++ [srv ++ ".service"]

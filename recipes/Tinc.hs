@@ -1,6 +1,8 @@
 import Cook.Recipe
 import Cook.Pacman
+import Cook.Systemd
 
-main :: IO ()
-main = runRecipe $ do
-    run $ installPackages ["tinc"]
+tinc :: Recipe ()
+tinc = do
+    installPackages ["tinc"]
+    enableService "tinc"
