@@ -1,4 +1,4 @@
-module Cook.FsTree (
+module Cook.Recipe.FsTree (
     FsTree (..)
   , Content (..)
 
@@ -20,7 +20,7 @@ import System.Posix.User
 
 import qualified Data.Text.IO as Text
 
-import qualified Cook.Template as T
+import qualified Cook.Recipe.Template as T
 
 type Attrs = (Maybe FileMode, Maybe (String, String))
 

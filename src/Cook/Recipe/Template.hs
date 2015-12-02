@@ -1,4 +1,4 @@
-module Cook.Template (
+module Cook.Recipe.Template (
     Template
 
   , asTemplate

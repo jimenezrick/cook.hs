@@ -40,7 +40,7 @@ import Text.Printf
 import qualified System.Process as P
 import qualified System.Process.Text.Lazy as PT
 
-import qualified Cook.FsTree as F
+import qualified Cook.Recipe.FsTree as F
 
 type Cwd = Maybe FilePath
 
