@@ -1,4 +1,4 @@
-module Cook.Systemd (
+module Cook.Catalog.Systemd (
     enableService
   ) where
 

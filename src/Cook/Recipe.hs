@@ -46,6 +46,11 @@ type Cwd = Maybe FilePath
 
 type Trace = [(Step, FilePath)]
 
+data RecipeConf = RecipeConf {
+    recipeConfRoot :: FilePath
+  , recipeMachine  :: String
+  }
+
 type Ctx = (Cwd, Trace)
 
 type Code = Int

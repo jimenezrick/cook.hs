@@ -1,4 +1,4 @@
-module Cook.Pacman (
+module Cook.Catalog.Pacman (
     pacman
   , upgradePackages
   , installPackages
