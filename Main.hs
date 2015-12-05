@@ -1,5 +1,7 @@
 import Cook.Recipe
 
 main :: IO ()
-main = runRecipe $ do
-    withCd "/tmp" $ run $ proc "ssh" ["buyvm.untroubled.be"]
+main = do
+    conf <- defRecipeConf
+    runRecipe conf $ do
+        withCd "/tmp" $ run $ proc "ssh" ["buyvm.untroubled.be", "uname -a"]

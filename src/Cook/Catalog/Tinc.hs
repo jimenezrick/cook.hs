@@ -17,6 +17,6 @@ copyConfig = do
     createFsTree "/tmp/etc" $
         Dir "tinc" defAttrs [
             File "tinc-up" undefined defAttrs
-          , File "tinc-down" content defAttrs
+          , File "tinc-down" undefined defAttrs
           , File "tinc_net.conf" (Copy "tinc_net.conf") defAttrs
           ]

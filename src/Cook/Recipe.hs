@@ -13,6 +13,7 @@ module Cook.Recipe (
   , runRead
   , runReadWith
 
+  , defRecipeConf
   , runRecipe
 
   , F.FsTree (..)
@@ -23,13 +24,14 @@ module Cook.Recipe (
   ) where
 
 --
--- TODO: withSudo, withSudoUser
+-- TODO: withSudo, withSudoUser, check withCd and command that always fails?
 --
 
 import Control.Monad.Except
 import Control.Monad.Morph
 import Control.Monad.State
 import Data.Text.Lazy (Text, empty)
+import Network.BSD
 import System.Directory
 import System.Exit
 import System.FilePath
@@ -42,16 +44,18 @@ import qualified System.Process.Text.Lazy as PT
 
 import qualified Cook.Recipe.FsTree as F
 
-type Cwd = Maybe FilePath
-
 type Trace = [(Step, FilePath)]
 
 data RecipeConf = RecipeConf {
     recipeConfRoot :: FilePath
-  , recipeMachine  :: String
+  , recipeHostName :: String
   }
 
-type Ctx = (Cwd, Trace)
+data Ctx = Ctx {
+    ctxCwd        :: Maybe FilePath
+  , ctxTrace      :: Trace
+  , ctxRecipeConf :: RecipeConf
+  }
 
 type Code = Int
 
@@ -63,6 +67,12 @@ data Step = Proc FilePath [String]
 instance Show Step where
     show (Proc prog args) = printf "process: %s %s" prog (unwords args)
     show (Shell cmd)      = printf "shell: %s" cmd
+
+defRecipeConf :: IO RecipeConf
+defRecipeConf = do
+    root <- getCurrentDirectory
+    hostname <- getHostName
+    return RecipeConf { recipeConfRoot = root , recipeHostName = hostname }
 
 createFsTree :: FilePath -> F.FsTree -> Recipe ()
 createFsTree base fstree = liftIO $ F.createFsTree base fstree
@@ -78,21 +88,21 @@ sh = Shell
 
 withCd :: FilePath -> Recipe a -> Recipe a
 withCd dir recipe = do
-    d <- cwdir
+    ctx <- get
     (t, a) <- hoist (withStateT $ chdir dir) $ do
         a <- recipe
         t <- ctrace
         return (t, a)
-    put (d, t)
+    put ctx { ctxTrace = t }
     return a
-  where chdir to | isAbsolute to = \(_, t) -> (Just to, t)
-                 | otherwise     = \(d, t) ->
-                     case d of
-                         Nothing -> (Just to, t)
-                         Just d' -> (Just $ d' </> to, t)
+  where chdir to | isAbsolute to = \ctx -> ctx { ctxCwd = Just to }
+                 | otherwise     = \ctx ->
+                     case ctxCwd ctx of
+                         Nothing -> ctx { ctxCwd = Just to }
+                         Just d' -> ctx { ctxCwd = Just $ d' </> to }
 
 cwdir :: Recipe (Maybe FilePath)
-cwdir = gets fst
+cwdir = gets ctxCwd
 
 absoluteCwd :: Recipe FilePath
 absoluteCwd = do
@@ -105,10 +115,10 @@ absoluteCwd = do
 trace :: Step -> Recipe ()
 trace step = do
     d <- absoluteCwd
-    modify $ fmap ((step, d):)
+    modify $ \ctx@(Ctx { ctxTrace = t }) -> ctx { ctxTrace = (step, d):t }
 
 ctrace :: Recipe Trace
-ctrace = gets snd
+ctrace = gets ctxTrace
 
 buildCmd :: String -> String
 buildCmd cmd = "set -o errexit -o nounset -o pipefail;" ++ cmd
@@ -142,9 +152,10 @@ runReadWith p = do
             t <- ctrace
             throwError (t, c)
 
-runRecipe :: Recipe a -> IO ()
-runRecipe recipe = do
-    r <- flip evalStateT (Nothing, mempty) $ runExceptT recipe
+runRecipe :: RecipeConf -> Recipe a -> IO ()
+runRecipe conf recipe = do
+    let ctx = Ctx { ctxCwd = Nothing, ctxTrace = mempty, ctxRecipeConf = conf }
+    r <- flip evalStateT ctx $ runExceptT recipe
     case r of
         Left (t, c) -> do
             printTrace t
