@@ -50,9 +50,11 @@ import qualified Cook.Recipe.FsTree as F
 type Trace = [(Step, FilePath)]
 
 data RecipeConf = RecipeConf {
-    recipeConfRoot     :: FilePath
+    recipeConfName     :: Maybe String
+  , recipeConfVerbose  :: Bool
+  , recipeConfRoot     :: FilePath
   , recipeConfHostName :: String
-  }
+  } deriving Show
 
 data Ctx = Ctx {
     ctxCwd         :: Maybe FilePath
@@ -76,7 +78,12 @@ defRecipeConf :: IO RecipeConf
 defRecipeConf = do
     root <- getCurrentDirectory
     hostname <- getHostName
-    return RecipeConf { recipeConfRoot = root, recipeConfHostName = hostname }
+    return RecipeConf {
+        recipeConfName     = Nothing
+      , recipeConfVerbose  = True
+      , recipeConfRoot     = root
+      , recipeConfHostName = hostname
+      }
 
 recipeConf :: Recipe RecipeConf
 recipeConf = gets ctxRecipeConf
@@ -169,16 +176,18 @@ runRecipe conf recipe = do
       , ctxIgnoreError = False
       , ctxRecipeConf  = conf
       }
+    hPrintf stderr "Cook: running with %s\n" (show conf)
     r <- flip evalStateT ctx $ runExceptT recipe
     case r of
         Left (t, c) -> do
             printTrace t
-            printf "Process exited with code %d\n" c
-        Right _ -> hPutStrLn stderr "Recipe successful"
+            hPrintf stderr "Cook: process exited with code %d\n" c
+        Right _ | recipeConfVerbose conf -> hPutStrLn stderr "Cook: recipe successful"
+                | otherwise              -> return ()
 
 printTrace :: Trace -> IO ()
 printTrace (failed:prev) = do
-    hPutStrLn stderr "Error in recipe:"
+    hPutStrLn stderr "Cook: error in recipe:"
     mapM_ (hPutStrLn stderr . ("  " ++) . fmt) $ reverse $ take 10 prev
     hPutStrLn stderr $ "> " ++ fmt failed
   where fmt (step, trc) = printf "%s (from %s)" (show step) trc
