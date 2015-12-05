@@ -1,19 +1,22 @@
 module Cook.Recipe (
     Recipe
+  , RecipeConf (..)
   , Step
 
   , proc
   , proc'
   , sh
 
-  , withCd
-
   , run
   , runWith
   , runRead
   , runReadWith
 
+  , withCd
+  , withoutError
+
   , defRecipeConf
+  , recipeConf
   , runRecipe
 
   , F.FsTree (..)
@@ -24,7 +27,7 @@ module Cook.Recipe (
   ) where
 
 --
--- TODO: withSudo, withSudoUser, check withCd and command that always fails?
+-- TODO: withSudo, withSudoUser
 --
 
 import Control.Monad.Except
@@ -47,14 +50,15 @@ import qualified Cook.Recipe.FsTree as F
 type Trace = [(Step, FilePath)]
 
 data RecipeConf = RecipeConf {
-    recipeConfRoot :: FilePath
-  , recipeHostName :: String
+    recipeConfRoot     :: FilePath
+  , recipeConfHostName :: String
   }
 
 data Ctx = Ctx {
-    ctxCwd        :: Maybe FilePath
-  , ctxTrace      :: Trace
-  , ctxRecipeConf :: RecipeConf
+    ctxCwd         :: Maybe FilePath
+  , ctxTrace       :: Trace
+  , ctxIgnoreError :: Bool
+  , ctxRecipeConf  :: RecipeConf
   }
 
 type Code = Int
@@ -72,7 +76,10 @@ defRecipeConf :: IO RecipeConf
 defRecipeConf = do
     root <- getCurrentDirectory
     hostname <- getHostName
-    return RecipeConf { recipeConfRoot = root , recipeHostName = hostname }
+    return RecipeConf { recipeConfRoot = root, recipeConfHostName = hostname }
+
+recipeConf :: Recipe RecipeConf
+recipeConf = gets ctxRecipeConf
 
 createFsTree :: FilePath -> F.FsTree -> Recipe ()
 createFsTree base fstree = liftIO $ F.createFsTree base fstree
@@ -86,27 +93,30 @@ proc' prog = Proc prog []
 sh :: String -> Step
 sh = Shell
 
-withCd :: FilePath -> Recipe a -> Recipe a
-withCd dir recipe = do
+withCtx :: (Ctx -> Ctx) -> Recipe a -> Recipe a
+withCtx f recipe = do
     ctx <- get
-    (t, a) <- hoist (withStateT $ chdir dir) $ do
+    (t, a) <- hoist (withStateT f) $ do
         a <- recipe
-        t <- ctrace
+        t <- gets ctxTrace
         return (t, a)
     put ctx { ctxTrace = t }
     return a
+
+withCd :: FilePath -> Recipe a -> Recipe a
+withCd dir = withCtx (chdir dir)
   where chdir to | isAbsolute to = \ctx -> ctx { ctxCwd = Just to }
                  | otherwise     = \ctx ->
                      case ctxCwd ctx of
                          Nothing -> ctx { ctxCwd = Just to }
                          Just d' -> ctx { ctxCwd = Just $ d' </> to }
 
-cwdir :: Recipe (Maybe FilePath)
-cwdir = gets ctxCwd
+withoutError :: Recipe a -> Recipe a
+withoutError = withCtx $ \ctx -> ctx { ctxIgnoreError = True }
 
 absoluteCwd :: Recipe FilePath
 absoluteCwd = do
-    d <- cwdir
+    d <- gets ctxCwd
     case d of
         Nothing                   -> liftIO getCurrentDirectory
         Just dir | isAbsolute dir -> return dir
@@ -117,9 +127,6 @@ trace step = do
     d <- absoluteCwd
     modify $ \ctx@(Ctx { ctxTrace = t }) -> ctx { ctxTrace = (step, d):t }
 
-ctrace :: Recipe Trace
-ctrace = gets ctxTrace
-
 buildCmd :: String -> String
 buildCmd cmd = "set -o errexit -o nounset -o pipefail;" ++ cmd
 
@@ -129,14 +136,15 @@ run step@(Shell cmd)      = trace step >> runWith (P.shell $ buildCmd cmd)
 
 runWith :: CreateProcess -> Recipe ()
 runWith p = do
-    dir <- cwdir
+    dir <- gets ctxCwd
+    noErr <- gets ctxIgnoreError
     (_, _, _, ph) <- liftIO $ P.createProcess p { cwd = dir }
     exit <- liftIO $ P.waitForProcess ph
     case exit of
-        ExitSuccess   -> return ()
-        ExitFailure c -> do
-            t <- ctrace
+        ExitFailure c | not noErr -> do
+            t <- gets ctxTrace
             throwError (t, c)
+        _ -> return ()
 
 runRead :: Step -> Recipe (Text, Text)
 runRead step@(Proc prog args) = trace step >> runReadWith (P.proc prog args)
@@ -144,17 +152,23 @@ runRead step@(Shell cmd)      = trace step >> runReadWith (P.shell $ buildCmd cm
 
 runReadWith :: CreateProcess -> Recipe (Text, Text)
 runReadWith p = do
-    dir <- cwdir
+    dir <- gets ctxCwd
+    noErr <- gets ctxIgnoreError
     (exit, out, err) <- liftIO $ PT.readCreateProcessWithExitCode p {cwd = dir } empty
     case exit of
-        ExitSuccess   -> return (out, err)
-        ExitFailure c -> do
-            t <- ctrace
+        ExitFailure c | not noErr -> do
+            t <- gets ctxTrace
             throwError (t, c)
+        _ -> return (out, err)
 
 runRecipe :: RecipeConf -> Recipe a -> IO ()
 runRecipe conf recipe = do
-    let ctx = Ctx { ctxCwd = Nothing, ctxTrace = mempty, ctxRecipeConf = conf }
+    let ctx = Ctx {
+        ctxCwd         = Nothing
+      , ctxTrace       = mempty
+      , ctxIgnoreError = False
+      , ctxRecipeConf  = conf
+      }
     r <- flip evalStateT ctx $ runExceptT recipe
     case r of
         Left (t, c) -> do

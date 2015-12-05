@@ -15,7 +15,7 @@ main = do
 
         withCd ".." $ do
             run $ sh "pwd"
-            run $ sh "echo $USER2"
+            run $ sh "echo $FOO"
 
         (o3, _) <- runRead $ proc "echo" ["hello", "$USER"]
         liftIO $ T.putStr o3
@@ -23,6 +23,9 @@ main = do
 
 foo :: Recipe (Text, Text)
 foo = withCd "/" $ do
+    withoutError $ run $ sh "cat caca"
+    conf <- recipeConf
+    run $ proc "echo" ["hostname:", recipeConfHostName conf]
     run $ proc' "pwd"
     run $ proc' "true"
     run $ sh "echo $USER"
