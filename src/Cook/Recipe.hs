@@ -14,6 +14,8 @@ module Cook.Recipe (
 
   , withCd
   , withoutError
+  , withSudo
+  , withSudoUser
 
   , defRecipeConf
   , recipeConf
@@ -25,10 +27,6 @@ module Cook.Recipe (
   , F.defAttrs
   , createFsTree
   ) where
-
---
--- TODO: withSudo, withSudoUser
---
 
 import Control.Monad.Except
 import Control.Monad.Morph
@@ -52,7 +50,7 @@ type Trace = [(Step, FilePath)]
 data RecipeConf = RecipeConf {
     recipeConfName     :: Maybe String
   , recipeConfVerbose  :: Bool
-  , recipeConfRoot     :: FilePath
+  , recipeConfRootDir  :: FilePath
   , recipeConfHostName :: String
   } deriving Show
 
@@ -60,11 +58,13 @@ data Ctx = Ctx {
     ctxCwd         :: Maybe FilePath
   , ctxTrace       :: Trace
   , ctxIgnoreError :: Bool
+  , ctxSudo        :: Maybe (Maybe String)
   , ctxRecipeConf  :: RecipeConf
   }
 
 type Code = Int
 
+-- TODO: Have a Recipe name (hierarchical)?
 type Recipe = ExceptT (Trace, Code) (StateT Ctx IO)
 
 data Step = Proc FilePath [String]
@@ -81,7 +81,7 @@ defRecipeConf = do
     return RecipeConf {
         recipeConfName     = Nothing
       , recipeConfVerbose  = True
-      , recipeConfRoot     = root
+      , recipeConfRootDir  = root
       , recipeConfHostName = hostname
       }
 
@@ -121,6 +121,13 @@ withCd dir = withCtx (chdir dir)
 withoutError :: Recipe a -> Recipe a
 withoutError = withCtx $ \ctx -> ctx { ctxIgnoreError = True }
 
+withSudo :: Recipe a -> Recipe a
+withSudo = withCtx $ \ctx -> ctx { ctxSudo = Just Nothing }
+
+withSudoUser :: String -> Recipe a -> Recipe a
+withSudoUser user | null user = error "Recipe.withSudoUser: invalid user"
+                  | otherwise = withCtx $ \ctx -> ctx { ctxSudo = Just (Just user) }
+
 absoluteCwd :: Recipe FilePath
 absoluteCwd = do
     d <- gets ctxCwd
@@ -134,12 +141,27 @@ trace step = do
     d <- absoluteCwd
     modify $ \ctx@(Ctx { ctxTrace = t }) -> ctx { ctxTrace = (step, d):t }
 
-buildCmd :: String -> String
-buildCmd cmd = "set -o errexit -o nounset -o pipefail;" ++ cmd
+buildProcProg :: Maybe (Maybe String) -> FilePath -> [String] -> (FilePath, [String])
+buildProcProg Nothing            prog args = (prog, args)
+buildProcProg (Just Nothing)     prog args = ("sudo", prog:args)
+buildProcProg (Just (Just user)) prog args = ("sudo", ["-u", user] ++ prog:args)
+
+buildShellCmd :: Maybe (Maybe String) -> String -> String
+buildShellCmd sudoMode = case sudoMode of
+                             Nothing          -> strictMode
+                             Just Nothing     -> strictMode . sudo
+                             Just (Just user) -> strictMode . sudoUser user
+  where strictMode = ("set -o errexit -o nounset -o pipefail; " ++)
+        sudo       = ("sudo " ++)
+        sudoUser u = (("sudo -u " ++ u ++ " " :: String) ++)
 
 run :: Step -> Recipe ()
-run step@(Proc prog args) = trace step >> runWith (P.proc prog args)
-run step@(Shell cmd)      = trace step >> runWith (P.shell $ buildCmd cmd)
+run step = do
+    sudo <- gets ctxSudo
+    trace step
+    runWith $ case step of
+                  Proc prog args -> uncurry P.proc $ buildProcProg sudo prog args
+                  Shell cmd      -> P.shell $ buildShellCmd sudo cmd
 
 runWith :: CreateProcess -> Recipe ()
 runWith p = do
@@ -154,8 +176,12 @@ runWith p = do
         _ -> return ()
 
 runRead :: Step -> Recipe (Text, Text)
-runRead step@(Proc prog args) = trace step >> runReadWith (P.proc prog args)
-runRead step@(Shell cmd)      = trace step >> runReadWith (P.shell $ buildCmd cmd)
+runRead step = do
+    sudo <- gets ctxSudo
+    trace step
+    runReadWith $ case step of
+                      Proc prog args -> uncurry P.proc $ buildProcProg sudo prog args
+                      Shell cmd      -> P.shell $ buildShellCmd sudo cmd
 
 runReadWith :: CreateProcess -> Recipe (Text, Text)
 runReadWith p = do
@@ -174,6 +200,7 @@ runRecipe conf recipe = do
         ctxCwd         = Nothing
       , ctxTrace       = mempty
       , ctxIgnoreError = False
+      , ctxSudo        = Nothing
       , ctxRecipeConf  = conf
       }
     hPrintf stderr "Cook: running with %s\n" (show conf)
