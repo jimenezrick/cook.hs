@@ -17,6 +17,7 @@ library
   ghc-options:         -Wall -threaded
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
+                     , RecordWildCards
                      , DeriveDataTypeable
                      , DeriveGeneric
                      , ScopedTypeVariables

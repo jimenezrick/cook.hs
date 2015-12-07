@@ -24,8 +24,8 @@ main = do
         runRead $ proc "echo" ["exit"]
 
 foo :: Recipe (Text, Text)
-foo = withCd "/" $ do
-    withoutError $ run $ sh "cat caca"
+foo = withRecipeName "foo" $ withCd "/" $ do
+    withRecipeName "caca" $ withoutError $ run $ sh "cat caca"
     conf <- recipeConf
     run $ proc "echo" ["hostname:", recipeConfHostName conf]
     run $ proc' "pwd"

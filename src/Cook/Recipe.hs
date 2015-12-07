@@ -12,6 +12,7 @@ module Cook.Recipe (
   , runRead
   , runReadWith
 
+  , withRecipeName
   , withCd
   , withoutError
   , withSudo
@@ -31,6 +32,8 @@ module Cook.Recipe (
 import Control.Monad.Except
 import Control.Monad.Morph
 import Control.Monad.State
+import Data.List
+import Data.Maybe
 import Data.Text.Lazy (Text, empty)
 import Network.BSD
 import System.Directory
@@ -45,8 +48,6 @@ import qualified System.Process.Text.Lazy as PT
 
 import qualified Cook.Recipe.FsTree as F
 
-type Trace = [(Step, FilePath)]
-
 data RecipeConf = RecipeConf {
     recipeConfName     :: Maybe String
   , recipeConfVerbose  :: Bool
@@ -55,16 +56,18 @@ data RecipeConf = RecipeConf {
   } deriving Show
 
 data Ctx = Ctx {
-    ctxCwd         :: Maybe FilePath
+    ctxRecipeNames :: [String]
+  , ctxCwd         :: Maybe FilePath
   , ctxTrace       :: Trace
   , ctxIgnoreError :: Bool
   , ctxSudo        :: Maybe (Maybe String)
   , ctxRecipeConf  :: RecipeConf
-  }
+  } deriving Show
+
+type Trace = [(Step, Ctx)]
 
 type Code = Int
 
--- TODO: Have a Recipe name (hierarchical)?
 type Recipe = ExceptT (Trace, Code) (StateT Ctx IO)
 
 data Step = Proc FilePath [String]
@@ -103,12 +106,15 @@ sh = Shell
 withCtx :: (Ctx -> Ctx) -> Recipe a -> Recipe a
 withCtx f recipe = do
     ctx <- get
-    (t, a) <- hoist (withStateT f) $ do
+    (trc, a) <- hoist (withStateT f) $ do
         a <- recipe
-        t <- gets ctxTrace
-        return (t, a)
-    put ctx { ctxTrace = t }
+        trc <- gets ctxTrace
+        return (trc, a)
+    put ctx { ctxTrace = trc }
     return a
+
+withRecipeName :: String -> Recipe a -> Recipe a
+withRecipeName name = withCtx $ \ctx@Ctx {..} -> ctx { ctxRecipeNames = name:ctxRecipeNames }
 
 withCd :: FilePath -> Recipe a -> Recipe a
 withCd dir = withCtx (chdir dir)
@@ -138,8 +144,8 @@ absoluteCwd = do
 
 trace :: Step -> Recipe ()
 trace step = do
-    d <- absoluteCwd
-    modify $ \ctx@(Ctx { ctxTrace = t }) -> ctx { ctxTrace = (step, d):t }
+    acwd <- absoluteCwd
+    modify $ \ctx@Ctx {..} -> ctx { ctxTrace = (step, ctx { ctxCwd = Just acwd }):ctxTrace }
 
 buildProcProg :: Maybe (Maybe String) -> FilePath -> [String] -> (FilePath, [String])
 buildProcProg Nothing            prog args = (prog, args)
@@ -170,9 +176,9 @@ runWith p = do
     (_, _, _, ph) <- liftIO $ P.createProcess p { cwd = dir }
     exit <- liftIO $ P.waitForProcess ph
     case exit of
-        ExitFailure c | not noErr -> do
-            t <- gets ctxTrace
-            throwError (t, c)
+        ExitFailure code | not noErr -> do
+            trc <- gets ctxTrace
+            throwError (trc, code)
         _ -> return ()
 
 runRead :: Step -> Recipe (Text, Text)
@@ -189,15 +195,16 @@ runReadWith p = do
     noErr <- gets ctxIgnoreError
     (exit, out, err) <- liftIO $ PT.readCreateProcessWithExitCode p {cwd = dir } empty
     case exit of
-        ExitFailure c | not noErr -> do
-            t <- gets ctxTrace
-            throwError (t, c)
+        ExitFailure code | not noErr -> do
+            trc <- gets ctxTrace
+            throwError (trc, code)
         _ -> return (out, err)
 
 runRecipe :: RecipeConf -> Recipe a -> IO ()
 runRecipe conf recipe = do
     let ctx = Ctx {
-        ctxCwd         = Nothing
+        ctxRecipeNames = []
+      , ctxCwd         = Nothing
       , ctxTrace       = mempty
       , ctxIgnoreError = False
       , ctxSudo        = Nothing
@@ -206,16 +213,21 @@ runRecipe conf recipe = do
     hPrintf stderr "Cook: running with %s\n" (show conf)
     r <- flip evalStateT ctx $ runExceptT recipe
     case r of
-        Left (t, c) -> do
-            printTrace t
-            hPrintf stderr "Cook: process exited with code %d\n" c
+        Left ([], _)                   -> error "Recipe.runRecipe: empty trace"
+        Left (trc@((_, ctx'):_), code) -> do
+            printTrace trc
+            hPrintf stderr "Cook: process exited with code %d\n" code
+            hPrintf stderr "      using %s\n" (show ctx' { ctxTrace = [] })
         Right _ | recipeConfVerbose conf -> hPutStrLn stderr "Cook: recipe successful"
                 | otherwise              -> return ()
 
 printTrace :: Trace -> IO ()
+printTrace []            = return ()
 printTrace (failed:prev) = do
     hPutStrLn stderr "Cook: error in recipe:"
     mapM_ (hPutStrLn stderr . ("  " ++) . fmt) $ reverse $ take 10 prev
     hPutStrLn stderr $ "> " ++ fmt failed
-  where fmt (step, trc) = printf "%s (from %s)" (show step) trc
-printTrace [] = error "Recipe.printTrace: empty trace"
+  where fmt (step, ctx) = printf "%s (%sfrom %s)" (show step) (fmtNames ctx) (fromJust $ ctxCwd ctx)
+        fmtNames ctx    = case ctxRecipeNames ctx of
+                              [] -> ""
+                              ns -> intercalate "." (reverse ns) ++ " "
