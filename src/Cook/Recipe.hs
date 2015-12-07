@@ -55,12 +55,17 @@ data RecipeConf = RecipeConf {
   , recipeConfHostName :: String
   } deriving Show
 
+data ExecPrivileges = ExecNormal
+                    | ExecSudo
+                    | ExecSudoUser String
+                    deriving Show
+
 data Ctx = Ctx {
     ctxRecipeNames :: [String]
   , ctxCwd         :: Maybe FilePath
   , ctxTrace       :: Trace
   , ctxIgnoreError :: Bool
-  , ctxSudo        :: Maybe (Maybe String)
+  , ctxSudo        :: ExecPrivileges
   , ctxRecipeConf  :: RecipeConf
   } deriving Show
 
@@ -128,11 +133,11 @@ withoutError :: Recipe a -> Recipe a
 withoutError = withCtx $ \ctx -> ctx { ctxIgnoreError = True }
 
 withSudo :: Recipe a -> Recipe a
-withSudo = withCtx $ \ctx -> ctx { ctxSudo = Just Nothing }
+withSudo = withCtx $ \ctx -> ctx { ctxSudo = ExecSudo }
 
 withSudoUser :: String -> Recipe a -> Recipe a
 withSudoUser user | null user = error "Recipe.withSudoUser: invalid user"
-                  | otherwise = withCtx $ \ctx -> ctx { ctxSudo = Just (Just user) }
+                  | otherwise = withCtx $ \ctx -> ctx { ctxSudo = ExecSudoUser user }
 
 absoluteCwd :: Recipe FilePath
 absoluteCwd = do
@@ -147,16 +152,15 @@ trace step = do
     acwd <- absoluteCwd
     modify $ \ctx@Ctx {..} -> ctx { ctxTrace = (step, ctx { ctxCwd = Just acwd }):ctxTrace }
 
-buildProcProg :: Maybe (Maybe String) -> FilePath -> [String] -> (FilePath, [String])
-buildProcProg Nothing            prog args = (prog, args)
-buildProcProg (Just Nothing)     prog args = ("sudo", prog:args)
-buildProcProg (Just (Just user)) prog args = ("sudo", ["-u", user] ++ prog:args)
-
-buildShellCmd :: Maybe (Maybe String) -> String -> String
+buildProcProg :: ExecPrivileges -> FilePath -> [String] -> (FilePath, [String])
+buildProcProg ExecNormal          prog args = (prog, args)
+buildProcProg ExecSudo            prog args = ("sudo", prog:args)
+buildProcProg (ExecSudoUser user) prog args = ("sudo", ["-u", user] ++ prog:args)
+buildShellCmd :: ExecPrivileges -> String -> String
 buildShellCmd sudoMode = case sudoMode of
-                             Nothing          -> strictMode
-                             Just Nothing     -> strictMode . sudo
-                             Just (Just user) -> strictMode . sudoUser user
+                             ExecNormal        -> strictMode
+                             ExecSudo          -> strictMode . sudo
+                             ExecSudoUser user -> strictMode . sudoUser user
   where strictMode = ("set -o errexit -o nounset -o pipefail; " ++)
         sudo       = ("sudo " ++)
         sudoUser u = (("sudo -u " ++ u ++ " " :: String) ++)
@@ -207,7 +211,7 @@ runRecipe conf recipe = do
       , ctxCwd         = Nothing
       , ctxTrace       = mempty
       , ctxIgnoreError = False
-      , ctxSudo        = Nothing
+      , ctxSudo        = ExecNormal
       , ctxRecipeConf  = conf
       }
     hPrintf stderr "Cook: running with %s\n" (show conf)
