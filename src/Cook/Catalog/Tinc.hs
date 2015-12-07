@@ -6,14 +6,16 @@ import Cook.Recipe
 import Cook.Catalog.Pacman
 import Cook.Catalog.Systemd
 
+-- TODO: nftables
+
 tinc :: Recipe ()
-tinc = do
+tinc = withRecipeName "Tinc" $ do
     copyConfig
     installPackages ["tinc"]
     enableService "tinc"
 
 copyConfig :: Recipe ()
-copyConfig = do
+copyConfig = withRecipeName "Config" $ do
     createFsTree "/tmp/etc" $
         Dir "tinc" defAttrs [
             File "tinc-up" undefined defAttrs

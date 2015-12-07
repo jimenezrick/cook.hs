@@ -7,10 +7,13 @@ module Cook.Catalog.Pacman (
 import Cook.Recipe
 
 pacman :: [String] -> Recipe ()
-pacman args = run $ proc "pacman" $ ["--noconfirm"] ++ args
+pacman = withRecipeName "Pacman" . pacman'
+
+pacman' :: [String] -> Recipe ()
+pacman' args = run $ proc "pacman" $ ["--noconfirm"] ++ args
 
 upgradePackages :: Recipe ()
-upgradePackages = pacman ["-Syu"]
+upgradePackages = withRecipeName "Pacman.Upgrade" $ pacman' ["-Syu"]
 
 installPackages :: [String] -> Recipe ()
-installPackages pkgs = pacman $ ["--needed", "-S"] ++ pkgs
+installPackages pkgs = withRecipeName "Pacman.Install" $ pacman' $ ["--needed", "-S"] ++ pkgs
