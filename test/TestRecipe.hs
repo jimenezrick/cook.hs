@@ -9,8 +9,10 @@ main :: IO ()
 main = do
     conf <- defRecipeConf
     runRecipe conf $ withRecipeName "main" $ do
-        withSudo $ run $ proc' "id"
-        withSudoUser "nobody" $ run $ proc' "id"
+        {-
+         -withSudo $ run $ proc' "id"
+         -withSudoUser "nobody" $ run $ proc' "id"
+         -}
         (o, _) <- foo
         liftIO $ print o
         run $ sh "pwd"

@@ -25,9 +25,11 @@ import qualified Cook.Recipe.Template as T
 type Attrs = (Maybe FileMode, Maybe (String, String))
 
 data Content where
-    Copy     :: FilePath -> Content
-    Template :: (Data a, Typeable a, Generic a, FromJSON a) => T.TemplateConf a -> Content
-    Content  :: Text -> Content
+    Copy            :: FilePath -> Content
+    Template        :: (Default a, Data a, Typeable a, Generic a, FromJSON a) => T.TemplateConf a -> Content
+    TemplateNoDef   :: (Data a, Typeable a, Generic a, FromJSON a) => T.TemplateConf a -> Content
+    TemplateWithDef :: (Data a, Typeable a, Generic a, FromJSON a) => a -> T.TemplateConf a -> Content
+    Content         :: Text -> Content
 
 data FsTree = File FilePath Content Attrs
             | Mode FilePath Attrs
@@ -43,12 +45,14 @@ createFsTree base fstree = do
     applyAttrs base fstree
 
 createFile :: FilePath -> FsTree -> IO ()
-createFile base (File name (Content txt) _)   = Text.writeFile (base </> name) txt
-createFile base (File name (Copy src) _)      = copyFile src (base </> name)
-createFile base (File name (Template tmpl) _) = T.useTemplate tmpl (base </> name)
-createFile _ (Mode _ _)                       = return ()
-createFile base (DirEmpty name _)             = mkdir (base </> name)
-createFile base (Dir name _ subtree)          = do
+createFile base (File name (Content txt) _)                  = Text.writeFile (base </> name) txt
+createFile base (File name (Copy src) _)                     = copyFile src (base </> name)
+createFile base (File name (Template tmpl) _)                = T.useTemplate tmpl (base </> name)
+createFile base (File name (TemplateNoDef tmpl) _)           = T.useTemplateNoDef tmpl (base </> name)
+createFile base (File name (TemplateWithDef withDef tmpl) _) = T.useTemplateWithDef withDef tmpl (base </> name)
+createFile _ (Mode _ _)                                      = return ()
+createFile base (DirEmpty name _)                            = mkdir (base </> name)
+createFile base (Dir name _ subtree)                         = do
     mkdir (base </> name)
     mapM_ (createFile $ base </> name) subtree
 

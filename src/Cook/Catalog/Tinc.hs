@@ -26,19 +26,17 @@ defTincConf = do
 
 tinc :: Recipe ()
 tinc = withRecipeName "Tinc" $ do
-    copyConfig
+    placeTincConf
     installPackages ["tinc"]
     enableService "tinc"
 
-copyConfig :: Recipe ()
-copyConfig = withRecipeName "Config" $ do
-    -- TODO: Allow to pass default values to the asTemplate
-    conf <- defTincConf
-
+placeTincConf :: Recipe ()
+placeTincConf = withRecipeName "Config" $ do
+    tincConf <- defTincConf
     createFsTree "/tmp/etc" $
         Dir "tinc" defAttrs [
             File "tinc-up" undefined defAttrs
           , File "tinc-down" undefined defAttrs
           , File "tinc-net.conf" (Copy "tinc_net.conf") defAttrs
-          , File "tinc.conf" (Template (asTemplate "tinc.conf.mustache" :: TemplateConf TincConf)) defAttrs
+          , File "tinc.conf" (TemplateWithDef tincConf (asTemplate "tinc.conf.mustache" :: TemplateConf TincConf)) defAttrs
           ]
