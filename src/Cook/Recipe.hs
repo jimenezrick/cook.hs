@@ -75,7 +75,7 @@ data Step = Proc FilePath [String]
 
 instance Show Step where
     show (Proc prog args) = printf "process: %s %s" prog (unwords args)
-    show (Shell cmd)      = printf "shell: %s" cmd
+    show (Shell cmd)      = printf "shell:   %s" cmd
 
 defRecipeConf :: IO RecipeConf
 defRecipeConf = do
@@ -223,11 +223,14 @@ runRecipe conf recipe = do
 
 printTrace :: Trace -> IO ()
 printTrace []            = return ()
-printTrace (failed:prev) = do
-    hPutStrLn stderr "Cook: error in recipe:"
+printTrace (failed@(_, ctx):prev) = do
+    let name = maybe "" (" " ++) (fmtNames ctx)
+    hPrintf stderr "Cook: error in recipe%s:\n" name
     mapM_ (hPutStrLn stderr . ("  " ++) . fmt) $ reverse $ take 10 prev
     hPutStrLn stderr $ "> " ++ fmt failed
-  where fmt (step, ctx) = printf "%s (%sfrom %s)" (show step) (fmtNames ctx) (fromJust $ ctxCwd ctx)
-        fmtNames ctx    = case ctxRecipeNames ctx of
-                              [] -> ""
-                              ns -> intercalate "." (reverse ns) ++ " "
+  where fmt (step, ctx') =
+          let names = maybe "" (++ " ") (fmtNames ctx')
+          in printf "%s (%sfrom %s)" (show step) names (fromJust $ ctxCwd ctx')
+        fmtNames ctx' = case ctxRecipeNames ctx' of
+                            [] -> Nothing
+                            ns -> Just $ intercalate "." (reverse ns)

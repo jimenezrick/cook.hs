@@ -8,7 +8,7 @@ import Cook.Recipe
 main :: IO ()
 main = do
     conf <- defRecipeConf
-    runRecipe conf $ do
+    runRecipe conf $ withRecipeName "main" $ do
         withSudo $ run $ proc' "id"
         withSudoUser "nobody" $ run $ proc' "id"
         (o, _) <- foo
@@ -24,7 +24,7 @@ main = do
         runRead $ proc "echo" ["exit"]
 
 foo :: Recipe (Text, Text)
-foo = withRecipeName "foo" $ withCd "/" $ do
+foo = withRecipeName "foo" $ withCd "/tmp" $ do
     withRecipeName "caca" $ withoutError $ run $ sh "cat caca"
     conf <- recipeConf
     run $ proc "echo" ["hostname:", recipeConfHostName conf]
