@@ -1,5 +1,5 @@
 module Cook.Recipe.Template (
-    Template
+    TemplateConf
 
   , asTemplate
   , useTemplate
@@ -17,13 +17,13 @@ import Text.Hastache.Context
 
 import qualified Data.Text.Lazy.IO as Text
 
-type Template a = Tagged a FilePath
+type TemplateConf a = Tagged a FilePath
 
-asTemplate :: FilePath -> Template a
+asTemplate :: FilePath -> TemplateConf a
 asTemplate = Tagged
 
 useTemplate :: forall a. (Data a, Typeable a, Generic a, FromJSON a)
-            => Template a -> FilePath -> IO ()
+            => TemplateConf a -> FilePath -> IO ()
 useTemplate src dst = do
     vals <- decodeFileEither $ src' -<.> "yaml"
     case vals of
@@ -66,15 +66,15 @@ instance Default SystemConf where
 instance FromJSON SystemConf
 
 loadConf :: forall a. (Default a, Data a, Typeable a, Generic a, FromJSON a)
-         => Template a -> IO (MuContext IO)
+         => TemplateConf a -> IO (MuContext IO)
 loadConf = loadConfWithDef $ mkGenericContext (def :: a)
 
 loadConfNoDef :: forall a. (Data a, Typeable a, Generic a, FromJSON a)
-              => Template a -> IO (MuContext IO)
+              => TemplateConf a -> IO (MuContext IO)
 loadConfNoDef = loadConfWithDef mempty
 
 loadConfWithDef :: forall a. (Data a, Typeable a, Generic a, FromJSON a)
-                => MuContext IO -> Template a -> IO (MuContext IO)
+                => MuContext IO -> TemplateConf a -> IO (MuContext IO)
 loadConfWithDef withDef path = do
     vals <- decodeFileEither $ path' -<.> "yaml"
     case vals of
@@ -93,4 +93,4 @@ loadConfWithDef withDef path = do
 -- instance FromJSON Foo
 -- 
 -- main :: IO ()
--- main = useTemplate (asTemplate "p.mustache" :: Template Foo) "p.out2"
+-- main = useTemplate (asTemplate "p.mustache" :: TemplateConf Foo) "p.out2"

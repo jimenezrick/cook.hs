@@ -26,7 +26,7 @@ type Attrs = (Maybe FileMode, Maybe (String, String))
 
 data Content where
     Copy     :: FilePath -> Content
-    Template :: (Data a, Typeable a, Generic a, FromJSON a) => T.Template a -> Content
+    Template :: (Data a, Typeable a, Generic a, FromJSON a) => T.TemplateConf a -> Content
     Content  :: Text -> Content
 
 data FsTree = File FilePath Content Attrs
