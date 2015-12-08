@@ -54,6 +54,7 @@ import qualified Cook.Recipe.FsTree as F
 
 data RecipeConf = RecipeConf {
     recipeConfName     :: Maybe String
+  , recipeConfDebug    :: Bool
   , recipeConfVerbose  :: Bool
   , recipeConfRootDir  :: FilePath
   , recipeConfHostName :: String
@@ -92,6 +93,7 @@ defRecipeConf = do
     hostname <- getHostName
     return RecipeConf {
         recipeConfName     = Nothing
+      , recipeConfDebug    = False
       , recipeConfVerbose  = True
       , recipeConfRootDir  = root
       , recipeConfHostName = hostname
@@ -116,6 +118,11 @@ withCtx :: (Ctx -> Ctx) -> Recipe a -> Recipe a
 withCtx f recipe = do
     ctx <- get
     (trc, a) <- hoist (withStateT f) $ do
+        ctx' <- get
+        let conf = ctxRecipeConf ctx'
+        if recipeConfVerbose conf
+            then liftIO $ hPrintf stderr "Cook: using %s\n" (show ctx')
+            else return ()
         a <- recipe
         trc <- gets ctxTrace
         return (trc, a)
@@ -218,7 +225,9 @@ runRecipe conf recipe = do
       , ctxSudo        = ExecNormal
       , ctxRecipeConf  = conf
       }
-    hPrintf stderr "Cook: running with %s\n" (show conf)
+    if recipeConfVerbose conf
+        then hPrintf stderr "Cook: running with %s\n" (show conf)
+        else return ()
     r <- flip evalStateT ctx $ runExceptT recipe
     case r of
         Left ([], _)                   -> error "Recipe.runRecipe: empty trace"
@@ -230,7 +239,7 @@ runRecipe conf recipe = do
                 | otherwise              -> return ()
 
 printTrace :: Trace -> IO ()
-printTrace []            = return ()
+printTrace []                     = return ()
 printTrace (failed@(_, ctx):prev) = do
     let name = maybe "" (" " ++) (fmtNames ctx)
     hPrintf stderr "Cook: error in recipe%s:\n" name
