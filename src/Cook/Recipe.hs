@@ -53,8 +53,7 @@ import Cook.Recipe.Template
 import qualified Cook.Recipe.FsTree as F
 
 data RecipeConf = RecipeConf {
-    recipeConfName     :: Maybe String
-  , recipeConfDebug    :: Bool
+    recipeConfDebug    :: Bool
   , recipeConfVerbose  :: Bool
   , recipeConfRootDir  :: FilePath
   , recipeConfHostName :: String
@@ -92,8 +91,7 @@ defRecipeConf = do
     root <- getCurrentDirectory
     hostname <- getHostName
     return RecipeConf {
-        recipeConfName     = Nothing
-      , recipeConfDebug    = False
+        recipeConfDebug    = False
       , recipeConfVerbose  = True
       , recipeConfRootDir  = root
       , recipeConfHostName = hostname
