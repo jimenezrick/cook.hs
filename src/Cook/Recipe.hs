@@ -118,9 +118,8 @@ withCtx f recipe = do
     (trc, a) <- hoist (withStateT f) $ do
         ctx' <- get
         let conf = ctxRecipeConf ctx'
-        if recipeConfDebug conf
-            then liftIO $ hPrintf stderr "Cook: using %s\n" (show ctx')
-            else return ()
+        when (recipeConfDebug conf) $
+            liftIO $ hPrintf stderr "Cook: using %s\n" (show ctx')
         a <- recipe
         trc <- gets ctxTrace
         return (trc, a)
@@ -229,9 +228,8 @@ runRecipe conf recipe = do
       , ctxSudo        = ExecNormal
       , ctxRecipeConf  = conf
       }
-    if recipeConfVerbose conf
-        then hPrintf stderr "Cook: running with %s\n" (show conf)
-        else return ()
+    when (recipeConfVerbose conf) $
+        hPrintf stderr "Cook: running with %s\n" (show conf)
     r <- flip evalStateT ctx $ runExceptT recipe
     case r of
         Left ([], _)                   -> error "Recipe.runRecipe: empty trace"

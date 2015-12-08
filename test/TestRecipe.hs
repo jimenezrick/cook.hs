@@ -4,6 +4,7 @@ import Data.Text.Lazy
 import qualified Data.Text.Lazy.IO as T
 
 import Cook.Recipe
+import Cook.Catalog.Systemd.Container
 
 main :: IO ()
 main = do
@@ -34,3 +35,11 @@ foo = withRecipeName "foo" $ withCd "/tmp" $ do
     run $ proc' "true"
     run $ sh "echo $USER"
     runRead $ sh "echo xxx"
+
+testContainer :: IO ()
+testContainer = do
+    conf <- defRecipeConf
+    runRecipe conf $ do
+        withSudo $ do
+            path <- makeArchRootFs "/tmp"
+            launchContainer path

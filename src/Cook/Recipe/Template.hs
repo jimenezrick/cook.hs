@@ -62,10 +62,10 @@ loadConfWithDef withDef = loadConf' $ mkGenericContext withDef
 loadConf' :: forall a. (Data a, Typeable a, Generic a, FromJSON a)
           => MuContext IO -> TemplateConf a -> IO (MuContext IO)
 loadConf' withDef path = do
-    vals <- decodeFileEither $ (untag path) -<.> "yaml"
+    vals <- decodeFileEither $ untag path -<.> "yaml"
     case vals of
         Left ex -> error $ prettyPrintParseException ex
-        Right v -> return $ (mkGenericContext (v :: a)) <> withDef
+        Right v -> return $ mkGenericContext (v :: a) <> withDef
 
 hastacheConf :: FilePath -> MuConfig IO
 hastacheConf tmplsPath = defaultConfig {

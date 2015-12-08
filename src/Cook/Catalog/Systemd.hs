@@ -5,4 +5,4 @@ module Cook.Catalog.Systemd (
 import Cook.Recipe
 
 enableService :: String -> Recipe ()
-enableService srv = withRecipeName "Systemd" $ run $ proc "systemd" $ ["enable"] ++ [srv ++ ".service"]
+enableService srv = withRecipeName "Systemd" $ run $ proc "systemd" $ "enable":[srv ++ ".service"]
