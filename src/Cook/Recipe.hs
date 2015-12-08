@@ -118,7 +118,7 @@ withCtx f recipe = do
     (trc, a) <- hoist (withStateT f) $ do
         ctx' <- get
         let conf = ctxRecipeConf ctx'
-        if recipeConfVerbose conf
+        if recipeConfDebug conf
             then liftIO $ hPrintf stderr "Cook: using %s\n" (show ctx')
             else return ()
         a <- recipe
@@ -128,7 +128,13 @@ withCtx f recipe = do
     return a
 
 withRecipeName :: String -> Recipe a -> Recipe a
-withRecipeName name = withCtx $ \ctx@Ctx {..} -> ctx { ctxRecipeNames = name:ctxRecipeNames }
+withRecipeName name recipe = withCtx (\ctx@Ctx {..} -> ctx { ctxRecipeNames = name:ctxRecipeNames }) $ do
+    ctx <- get
+    let conf = ctxRecipeConf ctx
+    case showCtxRecipeName ctx of
+        Just recipeName | recipeConfVerbose conf -> liftIO $ hPrintf stderr "Cook: in %s\n" recipeName
+        _                                        -> return ()
+    recipe
 
 withCd :: FilePath -> Recipe a -> Recipe a
 withCd dir = withCtx (chdir dir)
@@ -239,13 +245,13 @@ runRecipe conf recipe = do
 printTrace :: Trace -> IO ()
 printTrace []                     = return ()
 printTrace (failed@(_, ctx):prev) = do
-    let name = maybe "" (" " ++) (fmtNames ctx)
+    let name = maybe "" (" " ++) (showCtxRecipeName ctx)
     hPrintf stderr "Cook: error in recipe%s:\n" name
     mapM_ (hPutStrLn stderr . ("  " ++) . fmt) $ reverse $ take 10 prev
     hPutStrLn stderr $ "> " ++ fmt failed
-  where fmt (step, ctx') =
-          let names = maybe "" (++ " ") (fmtNames ctx')
-          in printf "%s (%sfrom %s)" (show step) names (fromJust $ ctxCwd ctx')
-        fmtNames ctx' = case ctxRecipeNames ctx' of
-                            [] -> Nothing
-                            ns -> Just $ intercalate "." (reverse ns)
+  where fmt (step, ctx') = let names = maybe "" (++ " ") (showCtxRecipeName ctx')
+                           in printf "%s (%sfrom %s)" (show step) names (fromJust $ ctxCwd ctx')
+
+showCtxRecipeName :: Ctx -> Maybe String
+showCtxRecipeName Ctx { ctxRecipeNames = [] } = Nothing
+showCtxRecipeName Ctx { ctxRecipeNames = ns } = Just $ intercalate "." $ reverse ns
