@@ -7,7 +7,10 @@ import Cook.Recipe
 import Cook.Catalog.Systemd.Container
 
 main :: IO ()
-main = do
+main = testContainer
+
+main' :: IO ()
+main' = do
     conf <- defRecipeConf
     runRecipe conf $ withRecipeName "main" $ do
         {-
@@ -40,6 +43,8 @@ testContainer :: IO ()
 testContainer = do
     conf <- defRecipeConf
     runRecipe conf $ do
+        createFsTree "/tmp" $ DirEmpty "CONTAINER" defAttrs
         withSudo $ do
-            path <- makeArchRootFs "/tmp"
-            launchContainer path
+            path <- makeArchRootFs "/tmp/CONTAINER"
+            --launchContainer path
+            return ()
