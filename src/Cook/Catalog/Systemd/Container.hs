@@ -1,26 +1,39 @@
 module Cook.Catalog.Systemd.Container (
-    makeArchRootFs
+    makeArchLinuxRootFs
+  , compressContainerFs
   , launchContainer
   ) where
 
 import Control.Monad.IO.Class
+import Data.List
 import Data.UUID
 import Data.UUID.V4
 import System.Directory
 import System.FilePath
 
+import qualified Data.Text.Lazy as T
+
 import Cook.Recipe
 
--- TODO: machinectl pull BTRFS/tar?
+-- TODO: Maybe send manually BTRFS snapshot and not using systemd-importd
 
-makeArchRootFs :: FilePath -> Recipe FilePath
-makeArchRootFs path = withRecipeName "Systemd.Container.MakeArchBase" $ do
+makeArchLinuxRootFs :: FilePath -> Recipe FilePath
+makeArchLinuxRootFs path = withRecipeName "Systemd.Container.MakeContainerArchRootFs" $ do
     uuid <- liftIO nextRandom
     let containerPath = path </> "arch-base-" ++ toString uuid
     liftIO $ createDirectory containerPath
-    run $ proc "pacstrap" ["-i", "-c", "-d", containerPath, "--needed", "base", "--ignore", "linux", "--noconfirm"]
-    run $ proc "ln" ["-s", "-f", containerPath, path </> "arch-base"]
+    (base, _) <- runRead $ proc "pacman" ["--quiet", "-Q", "--groups", "base"]
+    run $ proc "pacstrap" $ ["-i", "-c", "-d", containerPath, "--needed", "--noconfirm"] ++ withoutLinux base
+    run $ proc "ln" ["-s", "-f", "-T", containerPath, path </> "arch-base"]
     return containerPath
+  where withoutLinux = map T.unpack . delete "linux" . T.lines
+
+compressContainerFs :: FilePath -> Recipe FilePath
+compressContainerFs path = withRecipeName "Systemd.Container.CompressContainerFs" $ do
+    let tarballPath = path ++ ".tar.gz"
+    run $ proc "tar" ["cfz", tarballPath, path]
+    return tarballPath
 
 launchContainer :: FilePath -> Recipe ()
-launchContainer path = run $ proc "systemd-nspawn" ["-b", "-D", path]
+launchContainer path = withRecipeName "Systemd.Container.LaunchContainer" $ do
+    run $ proc "systemd-nspawn" ["-b", "-D", path]

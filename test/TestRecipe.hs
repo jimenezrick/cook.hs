@@ -45,6 +45,7 @@ testContainer = do
     runRecipe conf $ do
         createFsTree "/tmp" $ DirEmpty "CONTAINER" defAttrs
         withSudo $ do
-            path <- makeArchRootFs "/tmp/CONTAINER"
+            path <- makeArchLinuxRootFs "/tmp/CONTAINER"
+            compressContainerFs path
             --launchContainer path
             return ()
