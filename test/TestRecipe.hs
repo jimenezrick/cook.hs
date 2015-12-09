@@ -14,16 +14,16 @@ main' = do
     conf <- defRecipeConf
     runRecipe conf $ withRecipeName "main" $ do
         {-
-         -withSudo $ run $ proc' "id"
-         -withSudoUser "nobody" $ run $ proc' "id"
+         -withSudo $ runProc' "id"
+         -withSudoUser "nobody" $ runProc' "id"
          -}
         (o, _) <- foo
         liftIO $ print o
-        run $ sh "pwd"
+        runSh "pwd"
 
         withCd ".." $ do
-            run $ sh "pwd"
-            run $ sh "echo $FOO"
+            runSh "pwd"
+            runSh "echo $FOO"
 
         (o3, _) <- runRead $ proc "echo" ["hello", "$USER"]
         liftIO $ T.putStr o3
@@ -31,12 +31,12 @@ main' = do
 
 foo :: Recipe (Text, Text)
 foo = withRecipeName "foo" $ withCd "/tmp" $ do
-    withRecipeName "caca" $ withoutError $ run $ sh "cat caca"
+    withRecipeName "caca" $ withoutError $ runSh "cat caca"
     conf <- recipeConf
-    run $ proc "echo" ["hostname:", recipeConfHostName conf]
-    run $ proc' "pwd"
-    run $ proc' "true"
-    run $ sh "echo $USER"
+    runProc "echo" ["hostname:", recipeConfHostName conf]
+    runProc' "pwd"
+    runProc' "true"
+    runSh "echo $USER"
     runRead $ sh "echo xxx"
 
 testContainer :: IO ()

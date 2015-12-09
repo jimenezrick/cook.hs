@@ -8,6 +8,9 @@ module Cook.Recipe (
   , sh
 
   , run
+  , runProc
+  , runProc'
+  , runSh
   , runWith
   , runRead
   , runReadWith
@@ -186,6 +189,15 @@ run step = do
     runWith $ case step of
                   Proc prog args -> uncurry P.proc $ buildProcProg sudo prog args
                   Shell cmd      -> P.shell $ buildShellCmd sudo cmd
+
+runProc :: FilePath -> [String] -> Recipe ()
+runProc = (fmap . fmap) run proc
+
+runProc' :: FilePath -> Recipe ()
+runProc' = run . proc'
+
+runSh :: String -> Recipe ()
+runSh = run . sh
 
 runWith :: CreateProcess -> Recipe ()
 runWith p = do
