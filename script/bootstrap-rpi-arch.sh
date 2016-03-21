@@ -9,5 +9,5 @@ git clone https://github.com/jimenezrick/cook.hs.git
 
 pushd cook.hs
 cabal update
-cabal install --global -j2
+cabal install --global -j1
 popd
