@@ -26,10 +26,13 @@ library
   exposed-modules:     Cook.Recipe
                      , Cook.Recipe.FsTree
                      , Cook.Recipe.Template
+                     , Cook.Catalog.Git
                      , Cook.Catalog.Pacman
+                     , Cook.Catalog.SSH
                      , Cook.Catalog.Systemd
                      , Cook.Catalog.Systemd.Container
                      , Cook.Catalog.Tinc
+                     , Cook.Catalog.User
   build-depends:       base >=4.8 && <4.9
                      , data-default >=0.5 && <0.6
                      , tagged >=0.8 && <0.9
