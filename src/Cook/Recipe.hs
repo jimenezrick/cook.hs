@@ -58,6 +58,7 @@ import qualified Cook.Recipe.FsTree as F
 data RecipeConf = RecipeConf {
     recipeConfDebug    :: Bool
   , recipeConfVerbose  :: Bool
+  , recipeTraceLength  :: Int
   , recipeConfRootDir  :: FilePath
   , recipeConfHostName :: String
   } deriving Show
@@ -96,6 +97,7 @@ defRecipeConf = do
     return RecipeConf {
         recipeConfDebug    = False
       , recipeConfVerbose  = True
+      , recipeTraceLength  = 5
       , recipeConfRootDir  = root
       , recipeConfHostName = hostname
       }
@@ -246,18 +248,18 @@ runRecipe conf recipe = do
     case r of
         Left ([], _)                   -> error "Recipe.runRecipe: empty trace"
         Left (trc@((_, ctx'):_), code) -> do
-            printTrace trc
+            printTrace (recipeTraceLength conf) trc
             hPrintf stderr "Cook: process exited with code %d\n" code
             hPrintf stderr "      using %s\n" (show ctx' { ctxTrace = [] })
         Right _ | recipeConfVerbose conf -> hPutStrLn stderr "Cook: recipe successful"
                 | otherwise              -> return ()
 
-printTrace :: Trace -> IO ()
-printTrace []                     = return ()
-printTrace (failed@(_, ctx):prev) = do
+printTrace :: Int -> Trace -> IO ()
+printTrace _ []                     = return ()
+printTrace n (failed@(_, ctx):prev) = do
     let name = maybe "" (" " ++) (showCtxRecipeName ctx)
     hPrintf stderr "Cook: error in recipe%s:\n" name
-    mapM_ (hPutStrLn stderr . ("  " ++) . fmt) $ reverse $ take 10 prev
+    mapM_ (hPutStrLn stderr . ("  " ++) . fmt) $ reverse $ take n prev
     hPutStrLn stderr $ "> " ++ fmt failed
   where fmt (step, ctx') = let names = maybe "" (++ " ") (showCtxRecipeName ctx')
                            in printf "%s (%sfrom %s)" (show step) names (fromJust $ ctxCwd ctx')
