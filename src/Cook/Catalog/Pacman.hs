@@ -5,13 +5,11 @@ module Cook.Catalog.Pacman (
 
 import Cook.Recipe
 
-type PackageName = String
-
 pacman :: [String] -> Recipe ()
 pacman args = runProc "pacman" $ ["--quiet", "--noconfirm"] ++ args
 
 upgradeInstalledPackages :: Recipe ()
 upgradeInstalledPackages = withRecipeName "Pacman.UpgradeInstalledPackages" $ pacman ["-Syu"]
 
-installPackages :: [PackageName] -> Recipe ()
+installPackages :: [String] -> Recipe ()
 installPackages pkgs = withRecipeName "Pacman.InstallPackages" $ pacman $ ["--needed", "-S"] ++ pkgs
