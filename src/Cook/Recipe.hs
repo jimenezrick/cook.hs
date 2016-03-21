@@ -225,7 +225,7 @@ runReadWith :: CreateProcess -> Recipe (Text, Text)
 runReadWith p = do
     dir <- gets ctxCwd
     noErr <- gets ctxIgnoreError
-    (exit, out, err) <- liftIO $ PT.readCreateProcessWithExitCode p {cwd = dir } empty
+    (exit, out, err) <- liftIO $ PT.readCreateProcessWithExitCode p { cwd = dir } empty
     case exit of
         ExitFailure code | not noErr -> do
             trc <- gets ctxTrace
