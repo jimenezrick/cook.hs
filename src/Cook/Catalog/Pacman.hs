@@ -1,19 +1,17 @@
 module Cook.Catalog.Pacman (
-    pacman
-  , upgradePackages
+    upgradeInstalledPackages
   , installPackages
   ) where
 
 import Cook.Recipe
 
+type PackageName = String
+
 pacman :: [String] -> Recipe ()
-pacman = withRecipeName "Pacman" . pacman'
+pacman args = runProc "pacman" $ ["--quiet", "--noconfirm"] ++ args
 
-pacman' :: [String] -> Recipe ()
-pacman' args = runProc "pacman" $ ["--quiet", "--noconfirm"] ++ args
+upgradeInstalledPackages :: Recipe ()
+upgradeInstalledPackages = withRecipeName "Pacman.UpgradeInstalledPackages" $ pacman ["-Syu"]
 
-upgradePackages :: Recipe ()
-upgradePackages = withRecipeName "Pacman.Upgrade" $ pacman' ["-Syu"]
-
-installPackages :: [String] -> Recipe ()
-installPackages pkgs = withRecipeName "Pacman.Install" $ pacman' $ ["--needed", "-S"] ++ pkgs
+installPackages :: [PackageName] -> Recipe ()
+installPackages pkgs = withRecipeName "Pacman.InstallPackages" $ pacman $ ["--needed", "-S"] ++ pkgs
