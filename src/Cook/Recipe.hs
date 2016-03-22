@@ -73,7 +73,6 @@ data Ctx = Ctx {
     ctxRecipeNames :: [String]
   , ctxCwd         :: Maybe FilePath
   , ctxTrace       :: Trace
-  , ctxIgnoreError :: Bool
   , ctxSudo        :: ExecPrivileges
   , ctxRecipeConf  :: RecipeConf
   } deriving Show
@@ -154,8 +153,8 @@ withCd dir = withCtx (chdir dir)
                          Nothing -> ctx { ctxCwd = Just to }
                          Just d' -> ctx { ctxCwd = Just $ d' </> to }
 
-withoutError :: Recipe a -> Recipe a
-withoutError = withCtx $ \ctx -> ctx { ctxIgnoreError = True }
+withoutError :: Recipe a -> Recipe (Either Code a)
+withoutError recipe = (Right <$> recipe) `catchError` \(_, code) -> return $ Left code
 
 withSudo :: Recipe a -> Recipe a
 withSudo = withCtx $ \ctx -> ctx { ctxSudo = ExecSudo }
@@ -193,15 +192,13 @@ buildShellCmd sudoMode = case sudoMode of
 run :: Step -> Recipe ()
 run step = do
     sudo <- gets ctxSudo
-    noErr <- gets ctxIgnoreError
     trace step
     case step of
-        Proc prog args        -> runWith $ uncurry P.proc $ buildProcProg sudo prog args
-        Shell cmd             -> runWith $ P.shell $ buildShellCmd sudo cmd
-        Failure _ | noErr     -> return ()
-                  | otherwise -> do
-                      trc <- gets ctxTrace
-                      throwError (trc, 1)
+        Proc prog args -> runWith $ uncurry P.proc $ buildProcProg sudo prog args
+        Shell cmd      -> runWith $ P.shell $ buildShellCmd sudo cmd
+        Failure _      -> do
+            trc <- gets ctxTrace
+            throwError (trc, 1)
 
 runProc :: FilePath -> [String] -> Recipe ()
 runProc = (fmap . fmap) run proc
@@ -215,34 +212,31 @@ runSh = run . sh
 runWith :: CreateProcess -> Recipe ()
 runWith p = do
     dir <- gets ctxCwd
-    noErr <- gets ctxIgnoreError
     (_, _, _, ph) <- liftIO $ P.createProcess p { cwd = dir }
     exit <- liftIO $ P.waitForProcess ph
     case exit of
-        ExitFailure code | not noErr -> do
+        ExitFailure code -> do
             trc <- gets ctxTrace
             throwError (trc, code)
         _ -> return ()
 
 runRead :: Step -> Recipe (Text, Text)
-runRead f@(Failure _) = do
-    run f
-    return (empty, empty)
 runRead step = do
     sudo <- gets ctxSudo
     trace step
-    runReadWith $ case step of
-                      Proc prog args -> uncurry P.proc $ buildProcProg sudo prog args
-                      Shell cmd      -> P.shell $ buildShellCmd sudo cmd
-                      Failure _      -> error "Recipe.runRead: impossible case"
+    case step of
+        Proc prog args -> runReadWith $ uncurry P.proc $ buildProcProg sudo prog args
+        Shell cmd      -> runReadWith $ P.shell $ buildShellCmd sudo cmd
+        Failure _      -> do
+            trc <- gets ctxTrace
+            throwError (trc, 1)
 
 runReadWith :: CreateProcess -> Recipe (Text, Text)
 runReadWith p = do
     dir <- gets ctxCwd
-    noErr <- gets ctxIgnoreError
     (exit, out, err) <- liftIO $ PT.readCreateProcessWithExitCode p { cwd = dir } empty
     case exit of
-        ExitFailure code | not noErr -> do
+        ExitFailure code -> do
             trc <- gets ctxTrace
             throwError (trc, code)
         _ -> return (out, err)
@@ -253,7 +247,6 @@ runRecipe conf recipe = do
         ctxRecipeNames = []
       , ctxCwd         = Nothing
       , ctxTrace       = mempty
-      , ctxIgnoreError = False
       , ctxSudo        = ExecNormal
       , ctxRecipeConf  = conf
       }

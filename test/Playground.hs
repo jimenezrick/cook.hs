@@ -1,3 +1,5 @@
+import Control.Monad.IO.Class
+
 import Cook.Recipe
 
 main :: IO ()
@@ -12,9 +14,8 @@ foo = withRecipeName "Foo" $ do
     runProc "true" ["1"]
     runProc "true" ["2"]
     runProc "true" ["3"]
-    runProc "true" ["4"]
-    runProc "true" ["5"]
-    withoutError bar
+    err <- withoutError bar
+    liftIO $ print err
     beer
 
 bar :: Recipe ()
