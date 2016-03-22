@@ -14,8 +14,15 @@ foo = withRecipeName "Foo" $ do
     runProc "true" ["3"]
     runProc "true" ["4"]
     runProc "true" ["5"]
-    bar
+    withoutError bar
+    beer
 
 bar :: Recipe ()
 bar = withRecipeName "Bar" $ do
-    runProc' "true"
+    withoutError $ run $ failWith "shit 1"
+    run $ failWith "shit 2"
+    runProc "echo" ["bar"]
+
+beer :: Recipe ()
+beer = withRecipeName "Beer" $ do
+    runProc "echo" ["beer"]

@@ -24,6 +24,7 @@ module Cook.Recipe (
   , defRecipeConf
   , recipeConf
   , runRecipe
+  , failWith
 
   , F.FsTree (..)
   , F.Content (..)
@@ -85,10 +86,12 @@ type Recipe = ExceptT (Trace, Code) (StateT Ctx IO)
 
 data Step = Proc FilePath [String]
           | Shell String
+          | Failure String
 
 instance Show Step where
     show (Proc prog args) = printf "process: %s %s" prog (unwords args)
     show (Shell cmd)      = printf "shell:   %s" cmd
+    show (Failure msg)    = printf "failure: %s" msg
 
 defRecipeConf :: IO RecipeConf
 defRecipeConf = do
@@ -116,6 +119,9 @@ proc' prog = Proc prog []
 
 sh :: String -> Step
 sh = Shell
+
+failWith :: String -> Step
+failWith = Failure
 
 withCtx :: (Ctx -> Ctx) -> Recipe a -> Recipe a
 withCtx f recipe = do
@@ -187,10 +193,15 @@ buildShellCmd sudoMode = case sudoMode of
 run :: Step -> Recipe ()
 run step = do
     sudo <- gets ctxSudo
+    noErr <- gets ctxIgnoreError
     trace step
-    runWith $ case step of
-                  Proc prog args -> uncurry P.proc $ buildProcProg sudo prog args
-                  Shell cmd      -> P.shell $ buildShellCmd sudo cmd
+    case step of
+        Proc prog args        -> runWith $ uncurry P.proc $ buildProcProg sudo prog args
+        Shell cmd             -> runWith $ P.shell $ buildShellCmd sudo cmd
+        Failure _ | noErr     -> return ()
+                  | otherwise -> do
+                      trc <- gets ctxTrace
+                      throwError (trc, 1)
 
 runProc :: FilePath -> [String] -> Recipe ()
 runProc = (fmap . fmap) run proc
@@ -214,12 +225,16 @@ runWith p = do
         _ -> return ()
 
 runRead :: Step -> Recipe (Text, Text)
+runRead f@(Failure _) = do
+    run f
+    return (empty, empty)
 runRead step = do
     sudo <- gets ctxSudo
     trace step
     runReadWith $ case step of
                       Proc prog args -> uncurry P.proc $ buildProcProg sudo prog args
                       Shell cmd      -> P.shell $ buildShellCmd sudo cmd
+                      Failure _      -> error "Recipe.runRead: impossible case"
 
 runReadWith :: CreateProcess -> Recipe (Text, Text)
 runReadWith p = do
