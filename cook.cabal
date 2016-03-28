@@ -27,8 +27,8 @@ library
                      , Cook.Recipe.FsTree
                      , Cook.Recipe.Template
                      , Cook.Catalog.Git
-                     , Cook.Catalog.Pacman
                      , Cook.Catalog.SSH
+                     , Cook.Catalog.Arch.Pacman
                      , Cook.Catalog.Systemd
                      , Cook.Catalog.Systemd.Container
                      , Cook.Catalog.Tinc

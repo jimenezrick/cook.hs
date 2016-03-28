@@ -1,4 +1,4 @@
-module Cook.Catalog.Pacman (
+module Cook.Catalog.Arch.Pacman (
     upgradeInstalledPackages
   , installPackages
   ) where
