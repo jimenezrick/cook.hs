@@ -1,3 +1,4 @@
+import Control.Monad
 import Control.Monad.IO.Class
 
 import Cook.Recipe
@@ -20,8 +21,8 @@ foo = withRecipeName "Foo" $ do
 
 bar :: Recipe ()
 bar = withRecipeName "Bar" $ do
-    withoutError $ run $ failWith "shit 1"
-    run $ failWith "shit 2"
+    void $ withoutError $ failWith "shit 1"
+    failWith "shit 2"
     runProc "echo" ["bar"]
 
 beer :: Recipe ()

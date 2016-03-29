@@ -25,6 +25,7 @@ module Cook.Recipe (
   , recipeConf
   , runRecipe
   , failWith
+  , failWith'
 
   , F.FsTree (..)
   , F.Content (..)
@@ -119,8 +120,13 @@ proc' prog = Proc prog []
 sh :: String -> Step
 sh = Shell
 
-failWith :: String -> Step
-failWith = Failure
+failWith :: String -> Recipe ()
+failWith = run . Failure
+
+failWith' :: Code -> Recipe ()
+failWith' code = do
+    trc <- gets ctxTrace
+    throwError (trc, code)
 
 withCtx :: (Ctx -> Ctx) -> Recipe a -> Recipe a
 withCtx f recipe = do
