@@ -28,6 +28,7 @@ library
                      , Cook.Recipe.Template
                      , Cook.Catalog.Git
                      , Cook.Catalog.SSH
+                     , Cook.Catalog.Sudo
                      , Cook.Catalog.Arch.Pacman
                      , Cook.Catalog.Systemd
                      , Cook.Catalog.Systemd.Container

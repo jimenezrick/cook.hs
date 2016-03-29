@@ -7,7 +7,7 @@ import Data.Yaml
 import GHC.Generics
 
 import Cook.Recipe
-import Cook.Catalog.Pacman
+import Cook.Catalog.Arch.Pacman
 import Cook.Catalog.Systemd
 
 -- TODO: nftables
