@@ -19,4 +19,9 @@ addUser createHome extraGroups user =
   where userAlreadyExists = 9
 
 delUser :: String -> Recipe ()
-delUser user = withRecipeName "User.Del" $ runProc "userdel" ["-r", user]
+delUser user = withRecipeName "User.Delete" $ do
+    err <- withoutError $ runProc "userdel" ["-r", user]
+    case err of
+        Left code | code /= userDontExists -> failWith' code
+        _                                  -> return ()
+  where userDontExists = 6
