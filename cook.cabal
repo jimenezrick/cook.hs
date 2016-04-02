@@ -28,6 +28,7 @@ library
                      , Cook.Recipe.FsTree
                      , Cook.Recipe.Template
                      , Cook.Catalog.Git
+                     , Cook.Catalog.IPFS
                      , Cook.Catalog.SSH
                      , Cook.Catalog.Sudo
                      , Cook.Catalog.Arch.Pacman
