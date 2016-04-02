@@ -33,6 +33,8 @@ module Cook.Recipe (
   , F.defAttrs
   , createFsTree
 
+  , getEnv
+
   , module Cook.Recipe.Template
   ) where
 
@@ -44,6 +46,7 @@ import Data.Maybe
 import Data.Text.Lazy (Text, empty)
 import Network.BSD
 import System.Directory
+import System.Environment (lookupEnv)
 import System.Exit
 import System.FilePath
 import System.IO
@@ -281,3 +284,8 @@ printTrace n (failed@(_, ctx):prev) = do
 showCtxRecipeName :: Ctx -> Maybe String
 showCtxRecipeName Ctx { ctxRecipeNames = [] } = Nothing
 showCtxRecipeName Ctx { ctxRecipeNames = ns } = Just $ intercalate "." $ reverse ns
+
+getEnv :: String -> Recipe String
+getEnv var = do
+    val <- liftIO $ lookupEnv var
+    maybe (failWith $ printf "getEnv: %s is not defined" var) return val
