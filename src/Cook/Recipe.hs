@@ -123,10 +123,12 @@ proc' prog = Proc prog []
 sh :: String -> Step
 sh = Shell
 
-failWith :: String -> Recipe ()
-failWith = run . Failure
+failWith :: String -> Recipe a
+failWith msg = do
+    trace $ Failure msg
+    failWith' 1
 
-failWith' :: Code -> Recipe ()
+failWith' :: Code -> Recipe a
 failWith' code = do
     trc <- gets ctxTrace
     throwError (trc, code)
@@ -205,9 +207,7 @@ run step = do
     case step of
         Proc prog args -> runWith $ uncurry P.proc $ buildProcProg sudo prog args
         Shell cmd      -> runWith $ P.shell $ buildShellCmd sudo cmd
-        Failure _      -> do
-            trc <- gets ctxTrace
-            throwError (trc, 1)
+        Failure _      -> error "run: unreachable case"
 
 runProc :: FilePath -> [String] -> Recipe ()
 runProc = (fmap . fmap) run proc
@@ -236,9 +236,7 @@ runRead step = do
     case step of
         Proc prog args -> runReadWith $ uncurry P.proc $ buildProcProg sudo prog args
         Shell cmd      -> runReadWith $ P.shell $ buildShellCmd sudo cmd
-        Failure _      -> do
-            trc <- gets ctxTrace
-            throwError (trc, 1)
+        Failure _      -> error "runRead: unreachable case"
 
 runReadWith :: CreateProcess -> Recipe (Text, Text)
 runReadWith p = do
