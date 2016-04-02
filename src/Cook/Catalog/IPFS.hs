@@ -2,6 +2,9 @@ module Cook.Catalog.IPFS (
     requireIPFS
   ) where
 
+import Data.FileEmbed
+import Data.Text.Encoding
+
 import Cook.Recipe
 import Cook.Catalog.Arch.Pacman
 import Cook.Catalog.Systemd
@@ -20,4 +23,4 @@ requireIPFS = withRecipeName "IPFS.RequireIPFS" $ do
     startService "ipfs"
   where unitsPath = "/usr/lib/systemd/system"
         unitFile  = File "ipfs.service" unit (Nothing, Nothing)
-        unit      = Copy "ingredient/systemd/ipfs.service"
+        unit      = Content $ decodeUtf8 $(embedFile "ingredient/systemd/ipfs.service")
