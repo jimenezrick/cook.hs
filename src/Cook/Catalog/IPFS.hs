@@ -17,7 +17,7 @@ requireIPFS = withRecipeName "IPFS.RequireIPFS" $ do
     withSudoUser "ipfs" $ do
         home <- getEnv "HOME"
         withCd home $ do
-            runProc "ipfs" ["init"]
+            withoutError $ runProc "ipfs" ["init"]
     createFsTree unitsPath unitFile
     enableService "ipfs"
     startService "ipfs"
