@@ -30,7 +30,7 @@ isPackageInstalled pkg = withRecipeName "Arch.Pacman.IsPackageInstalled" $ do
 
 requirePackages :: NonEmpty String -> Recipe ()
 requirePackages pkgs = withRecipeName "Arch.Pacman.RequirePackages" $ do
-    missingPkgs <- filterM isPackageInstalled $ toList pkgs
+    missingPkgs <- filterM (fmap not . isPackageInstalled) $ toList pkgs
     case missingPkgs of
         [] -> return ()
         _  -> do upgradeInstalledPackages
