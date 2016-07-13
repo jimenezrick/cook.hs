@@ -1,17 +1,16 @@
 name:                cook
 version:             0.1.0.0
-synopsis:            Simple/effective configuration-management + deployment done in Haskell
-description:         Don't write shell script any more!
+synopsis:            Simple/effective configuration management + deployment done in Haskell
+description:         F*ck shell script!
 homepage:            https://github.com/jimenezrick/cook.hs
-license:             MIT
 license-file:        LICENSE
+license:             MIT
 author:              Ricardo Catalinas Jiménez <r@untroubled.be>
-maintainer:          Ricardo Catalinas Jiménez <r@untroubled.be>
 copyright:           Copyright (c) 2016 Ricardo Catalinas Jiménez
 category:            Utility
 build-type:          Simple
 extra-source-files:  README
-cabal-version:       >=1.10
+cabal-version:       >=1.20
 
 library
   ghc-options:         -Wall -threaded
@@ -37,38 +36,38 @@ library
                      , Cook.Catalog.Systemd.Container
                      , Cook.Catalog.Tinc
                      , Cook.Catalog.User
-  build-depends:       base >=4.8 && <4.9
-                     , data-default >=0.5 && <0.6
-                     , tagged >=0.8 && <0.9
-                     , yaml >=0.8 && <0.9
-                     , filepath >=1.4 && <1.5
-                     , hastache >=0.6 && <0.7
-                     , text >=1.2 && <1.3
-                     , transformers >=0.4 && <0.5
-                     , mtl >=2.2 && <2.3
-                     , mmorph >=1.0 && <1.1
-                     , directory >=1.2 && <1.3
-                     , process >=1.2 && <1.3
-                     , process-extras >=0.3 && <0.4
-                     , aeson >=0.10 && <0.11
-                     , unix >=2.7 && <2.8
-                     , network >=2.6 && <2.7
-                     , uuid >=1.3 && <1.4
-                     , semigroups >=0.18 && <0.19
-                     , file-embed >=0.0.9 && <0.0.10
+  build-depends:       base >=4.8 && <5
+                     , data-default
+                     , tagged
+                     , yaml
+                     , filepath
+                     , hastache
+                     , text
+                     , transformers
+                     , mtl
+                     , mmorph
+                     , directory
+                     , process
+                     , process-extras
+                     , aeson
+                     , unix
+                     , network
+                     , uuid
+                     , semigroups
+                     , file-embed
 
 executable cook
   ghc-options:         -Wall -threaded
   default-language:    Haskell2010
   main-is:             Main.hs
-  build-depends:       cook
-                     , base >=4.8 && <4.9
+  build-depends:       base >=4.8 && <5
+                     , cook
 
 executable test-recipe
   ghc-options:         -Wall -threaded
   default-language:    Haskell2010
   main-is:             test/TestRecipe.hs
-  build-depends:       cook
-                     , base >=4.8 && <4.9
-                     , transformers >=0.4 && <0.5
-                     , text >=1.2 && <1.3
+  build-depends:       base >=4.8 && <5
+                     , transformers
+                     , text
+                     , cook
