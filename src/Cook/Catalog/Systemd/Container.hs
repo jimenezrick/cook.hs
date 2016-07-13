@@ -16,6 +16,7 @@ import qualified Data.Text.Lazy as T
 import Cook.Recipe
 
 -- TODO: Maybe send manually BTRFS snapshot and not using systemd-importd
+-- XXX: Use cpio instead?
 
 makeArchLinuxRootFs :: FilePath -> Recipe FilePath
 makeArchLinuxRootFs path = withRecipeName "Systemd.Container.MakeContainerArchRootFs" $ do
