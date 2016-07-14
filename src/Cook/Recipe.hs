@@ -14,6 +14,8 @@ module Cook.Recipe (
   , runWith
   , runRead
   , runReadWith
+  , runTakeRead
+  , runTakeReadWith
 
   , withRecipeName
   , withCd
@@ -231,18 +233,24 @@ runWith p = do
         _ -> return ()
 
 runRead :: Step -> Recipe (Text, Text)
-runRead step = do
+runRead step = runTakeRead step empty
+
+runReadWith :: CreateProcess -> Recipe (Text, Text)
+runReadWith p = runTakeReadWith p empty
+
+runTakeRead :: Step -> Text -> Recipe (Text, Text)
+runTakeRead step input = do
     sudo <- gets ctxSudo
     trace step
     case step of
-        Proc prog args -> runReadWith $ uncurry P.proc $ buildProcProg sudo prog args
-        Shell cmd      -> runReadWith $ P.shell $ buildShellCmd sudo cmd
-        Failure _      -> error "runRead: unreachable case"
+        Proc prog args -> runTakeReadWith (uncurry P.proc $ buildProcProg sudo prog args) input
+        Shell cmd      -> runTakeReadWith (P.shell $ buildShellCmd sudo cmd) input
+        Failure _      -> error "runTakeRead: unreachable case"
 
-runReadWith :: CreateProcess -> Recipe (Text, Text)
-runReadWith p = do
+runTakeReadWith :: CreateProcess -> Text -> Recipe (Text, Text)
+runTakeReadWith p input = do
     dir <- gets ctxCwd
-    (exit, out, err) <- liftIO $ PT.readCreateProcessWithExitCode p { cwd = dir } empty
+    (exit, out, err) <- liftIO $ PT.readCreateProcessWithExitCode p { cwd = dir } input
     case exit of
         ExitFailure code -> do
             trc <- gets ctxTrace
