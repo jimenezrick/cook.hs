@@ -210,7 +210,7 @@ run step = do
     case step of
         Proc prog args -> runWith $ uncurry P.proc $ buildProcProg sudo prog args
         Shell cmd      -> runWith $ P.shell $ buildShellCmd sudo cmd
-        Failure _      -> error "run: unreachable case"
+        Failure _      -> error "Recipe.run: unreachable case"
 
 runProc :: FilePath -> [String] -> Recipe ()
 runProc = (fmap . fmap) run proc
@@ -245,7 +245,7 @@ runTakeRead step input = do
     case step of
         Proc prog args -> runTakeReadWith (uncurry P.proc $ buildProcProg sudo prog args) input
         Shell cmd      -> runTakeReadWith (P.shell $ buildShellCmd sudo cmd) input
-        Failure _      -> error "runTakeRead: unreachable case"
+        Failure _      -> error "Recipe.runTakeRead: unreachable case"
 
 runTakeReadWith :: CreateProcess -> Text -> Recipe (Text, Text)
 runTakeReadWith p input = do
