@@ -54,7 +54,6 @@ library
                      , network
                      , uuid
                      , semigroups
-                     , file-embed
 
 executable cook
   ghc-options:         -Wall

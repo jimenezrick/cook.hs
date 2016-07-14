@@ -3,8 +3,6 @@ module Cook.Catalog.IPFS (
   ) where
 
 import Control.Monad
-import Data.FileEmbed
-import Data.Text.Encoding
 
 import Cook.Recipe
 import Cook.Catalog.Arch.Pacman
@@ -19,9 +17,5 @@ requireIPFS = withRecipeName "IPFS.RequireIPFS" $ do
         home <- getEnv "HOME"
         withCd home $ do
             withoutError $ runProc "ipfs" ["init"]
-    createFsTree unitsPath unitFile
     enableService "ipfs"
     startService "ipfs"
-  where unitsPath = "/usr/lib/systemd/system"
-        unitFile  = File "ipfs.service" unit (Nothing, Nothing)
-        unit      = Content $ decodeUtf8 $(embedFile "ingredient/systemd/ipfs.service")
