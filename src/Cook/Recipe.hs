@@ -191,6 +191,7 @@ buildProcProg :: ExecPrivileges -> FilePath -> [String] -> (FilePath, [String])
 buildProcProg ExecNormal          prog args = (prog, args)
 buildProcProg ExecSudo            prog args = ("sudo", prog:args)
 buildProcProg (ExecSudoUser user) prog args = ("sudo", ["-u", user] ++ prog:args)
+
 buildShellCmd :: ExecPrivileges -> String -> String
 buildShellCmd sudoMode = case sudoMode of
                              ExecNormal        -> strictMode
