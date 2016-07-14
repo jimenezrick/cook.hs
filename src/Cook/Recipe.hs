@@ -16,6 +16,9 @@ module Cook.Recipe (
   , runReadWith
   , runTakeRead
   , runTakeReadWith
+  , runPipe
+  , runPipeRead
+  , runPipeTakeRead
 
   , withRecipeName
   , withCd
@@ -55,6 +58,7 @@ import System.IO
 import System.Process (CreateProcess (..))
 import Text.Printf
 
+import qualified Data.Text.Lazy.IO as T
 import qualified System.Process as P
 import qualified System.Process.Text.Lazy as PT
 
@@ -277,6 +281,18 @@ runRecipe conf recipe = do
             hPrintf stderr "      using %s\n" (show ctx' { ctxTrace = [] })
         Right _ | recipeConfVerbose conf -> hPutStrLn stderr "Cook: recipe successful"
                 | otherwise              -> return ()
+
+runPipe :: [Step] -> Recipe ()
+runPipe pipe = runPipeTakeRead pipe empty >>= liftIO . T.putStr
+
+runPipeRead :: [Step] -> Recipe Text
+runPipeRead pipe = runPipeTakeRead pipe empty
+
+runPipeTakeRead :: [Step] -> Text -> Recipe Text
+runPipeTakeRead []     input = return input
+runPipeTakeRead (s:ss) input = do
+    (out, _) <- runTakeRead s input
+    runPipeTakeRead ss out
 
 printTrace :: Int -> Trace -> IO ()
 printTrace _ []                     = return ()
