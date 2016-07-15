@@ -27,6 +27,7 @@ library
   exposed-modules:     Cook.Recipe
                      , Cook.Recipe.FsTree
                      , Cook.Recipe.Template
+                     , Cook.Catalog.Cjdns
                      , Cook.Catalog.Git
                      , Cook.Catalog.IPFS
                      , Cook.Catalog.SSH
@@ -39,7 +40,7 @@ library
   build-depends:       base >=4.8 && <5
                      , data-default
                      , tagged
-                     , yaml
+                     , bytestring
                      , filepath
                      , hastache
                      , text
@@ -49,11 +50,15 @@ library
                      , directory
                      , process
                      , process-extras
+                     , yaml
                      , aeson
+                     , aeson-pretty
                      , unix
                      , network
                      , uuid
                      , semigroups
+                     , lens
+                     , file-embed
 
 executable cook
   ghc-options:         -Wall

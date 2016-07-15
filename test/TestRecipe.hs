@@ -5,9 +5,10 @@ import qualified Data.Text.Lazy.IO as T
 
 import Cook.Recipe
 import Cook.Catalog.Systemd.Container
+import Cook.Catalog.Cjdns
 
 main :: IO ()
-main = testContainer
+main = testCjdns
 
 main' :: IO ()
 main' = do
@@ -49,3 +50,9 @@ testContainer = do
             compressContainerFs path
             --launchContainer path
             return ()
+
+testCjdns :: IO ()
+testCjdns = do
+    conf <- defRecipeConf
+    runRecipe conf $ do
+        requireCjdnsWith "cjdns.conf"
