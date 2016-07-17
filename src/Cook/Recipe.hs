@@ -114,7 +114,7 @@ recipeConf :: Recipe RecipeConf
 recipeConf = gets ctxRecipeConf
 
 createFsTree :: FilePath -> F.FsTree -> Recipe ()
-createFsTree base fstree = liftIO $ F.createFsTree base fstree
+createFsTree base fstree = liftIO $ F.createFsTree base fstree -- TODO: Catch IO errors
 
 proc :: FilePath -> [String] -> Step
 proc = Proc

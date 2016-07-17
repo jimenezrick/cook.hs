@@ -38,25 +38,24 @@ library
                      , Cook.Catalog.Systemd.Container
                      , Cook.Catalog.User
   build-depends:       base >=4.8 && <5
-                     , data-default
                      , bytestring
+                     , data-default
+                     , semigroups
                      , filepath
-                     , mustache
                      , text
                      , transformers
                      , mtl
                      , mmorph
+                     , lens
+                     , unix
+                     , network
                      , directory
                      , process
                      , process-extras
+                     , uuid
                      , yaml
                      , aeson
-                     , aeson-pretty
-                     , unix
-                     , network
-                     , uuid
-                     , semigroups
-                     , lens
+                     , mustache
                      , file-embed
 
 executable cook
