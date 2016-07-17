@@ -39,8 +39,6 @@ module Cook.Recipe (
   , createFsTree
 
   , getEnv
-
-  , module Cook.Recipe.Template
   ) where
 
 import Control.Monad.Except
@@ -61,8 +59,6 @@ import Text.Printf
 import qualified Data.Text.Lazy.IO as T
 import qualified System.Process as P
 import qualified System.Process.Text.Lazy as PT
-
-import Cook.Recipe.Template
 
 import qualified Cook.Recipe.FsTree as F
 

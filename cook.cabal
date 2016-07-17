@@ -25,6 +25,7 @@ library
                      , GADTs
   hs-source-dirs:      src
   exposed-modules:     Cook.Recipe
+                     , Cook.Recipe.Config
                      , Cook.Recipe.FsTree
                      , Cook.Recipe.Template
                      , Cook.Catalog.Cjdns
@@ -35,7 +36,6 @@ library
                      , Cook.Catalog.Arch.Pacman
                      , Cook.Catalog.Systemd
                      , Cook.Catalog.Systemd.Container
-                     , Cook.Catalog.Tinc
                      , Cook.Catalog.User
   build-depends:       base >=4.8 && <5
                      , data-default
