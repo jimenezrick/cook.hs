@@ -2,33 +2,30 @@ module Cook.Recipe.Config (
     loadConfig
   ) where
 
-import Control.Monad.IO.Class
+import Control.Exception
+import Data.Aeson
 import System.FilePath
 
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as B
 import qualified Data.Yaml as Y
 
-import Cook.Recipe
-
-type Config = J.Object
-
-loadConfig :: FilePath -> Recipe Config
+loadConfig :: FromJSON a => FilePath -> IO a
 loadConfig path
   | takeExtension path == ".json" = loadJSONConfig path
   | takeExtension path == ".yaml" = loadYAMLConfig path
-  | otherwise                     = failWith "Unsupported config format"
+  | otherwise                     = fail "Unsupported config format" -- XXX
 
-loadJSONConfig :: FilePath -> Recipe Config
+loadJSONConfig :: FromJSON a => FilePath -> IO a
 loadJSONConfig path = do
-    conf <- liftIO $ B.readFile path -- TODO: Catch IO error
+    conf <- B.readFile path -- TODO: Catch IO error
     case J.eitherDecode conf of
-        Left err  -> failWith err
+        Left err  -> fail err -- XXX
         Right obj -> return obj
 
-loadYAMLConfig :: FilePath -> Recipe Config
+loadYAMLConfig :: FromJSON a => FilePath -> IO a
 loadYAMLConfig path = do
-    conf <- liftIO $ B.readFile path -- TODO: Catch IO error
-    case Y.decodeEither (B.toStrict conf) of
-        Left err  -> failWith err
+    conf <- B.readFile path -- TODO: Catch IO error
+    case Y.decodeEither' (B.toStrict conf) of
+        Left err  -> throwIO err -- XXX
         Right obj -> return obj

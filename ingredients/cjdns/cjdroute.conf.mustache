@@ -1,0 +1,70 @@
+{
+  "pipe" : "/tmp",
+  "noBackground" : 0,
+  "logging" : {
+
+  },
+  "security" : [
+    {
+      "keepNetAdmin" : 1,
+      "setuser" : "nobody"
+    },
+    {
+      "chroot" : "/var/run/"
+    },
+    {
+      "nofiles" : 0
+    },
+    {
+      "noforks" : 1
+    },
+    {
+      "seccomp" : 1
+    },
+    {
+      "setupComplete" : 1
+    }
+  ],
+  "router" : {
+    "ipTunnel" : {
+      "outgoingConnections" : [
+
+      ],
+      "allowedConnections" : [
+
+      ]
+    },
+    "interface" : {
+      "type" : "TUNInterface"
+    }
+  },
+  "interfaces" : {
+    "UDPInterface" : [
+      {
+        "connectTo" : {
+
+        },
+        "bind" : "0.0.0.0:7966"
+      },
+      {
+        "connectTo" : {
+
+        },
+        "bind" : "[::]:7966"
+      }
+    ]
+  },
+  "admin" : {
+    "password" : "NONE",
+    "bind" : "127.0.0.1:11234"
+  },
+  "authorizedPasswords" : [
+    {
+      "user" : "default-login",
+      "password" : "t5y23u1cu8h819f51f23csgcd7lh3ks"
+    }
+  ],
+  "ipv6" : "fcbe:77ac:b3e8:d2f:ba15:5af6:5b0a:4ae6",
+  "publicKey" : "g4tgjyb20sc30ctzlnhs6q52v62jquvxgw99lcwfbd3mhl1uv4s0.k",
+  "privateKey" : "550b7daf7336da80ab2446217ea05fb66864022014208f194c90fc2433b309af"
+}

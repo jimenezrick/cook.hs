@@ -39,10 +39,9 @@ library
                      , Cook.Catalog.User
   build-depends:       base >=4.8 && <5
                      , data-default
-                     , tagged
                      , bytestring
                      , filepath
-                     , hastache
+                     , mustache
                      , text
                      , transformers
                      , mtl
