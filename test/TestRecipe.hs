@@ -55,4 +55,4 @@ testCjdns :: IO ()
 testCjdns = do
     conf <- defRecipeConf
     runRecipe conf $ do
-        requireCjdnsWith "cjdns.conf"
+        requireCjdns "cjdroute.conf.yaml"

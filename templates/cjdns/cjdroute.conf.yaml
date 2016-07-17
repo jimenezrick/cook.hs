@@ -1,0 +1,6 @@
+ipv6: fca2:641e:668e:fbc5:d4a2:7aff:fa27:5d38
+publicKey: 9nm9qz65xbxtv8bs7js5lnmb46pnzrc5s4qkdr21lq3tq648cxp0.k
+privateKey: 3e8619543ee41e68505d14de08c49ff283b90b0072f22c23b75f751d704ba7c5
+
+admin_password: "NONE"
+admin_bind: "127.0.0.1:11234"

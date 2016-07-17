@@ -12,6 +12,10 @@ import qualified Data.Yaml as Y
 
 import Cook.Recipe
 
+--
+-- TODO: Use recipeConfRootDir to load a relative path from there
+--
+
 loadConfig :: FromJSON a => FilePath -> Recipe a
 loadConfig path
   | takeExtension path == ".json" = loadJSONConfig path

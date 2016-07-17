@@ -22,7 +22,7 @@ data CjdnsOpts = CjdnsOpts
     { _privateKey :: Text
     , _publicKey  :: Text
     , _ipv6       :: Text
-    } deriving Generic
+    } deriving (Show, Generic)
 
 instance ToJSON CjdnsOpts
 
@@ -30,7 +30,7 @@ instance FromJSON CjdnsOpts where
     parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = drop 1 }
 
 confTemplate :: ByteString
-confTemplate = $(embedFile "ingredients/cjdns/cjdroute.conf.mustache")
+confTemplate = $(embedFile "templates/cjdns/cjdroute.conf.mustache")
 
 requireCjdns :: FilePath -> Recipe ()
 requireCjdns confPath = withRecipeName "Cjdns.RequireCjdns" $ do

@@ -44,27 +44,27 @@
         "connectTo" : {
 
         },
-        "bind" : "0.0.0.0:7966"
+        "bind" : "0.0.0.0:22378"
       },
       {
         "connectTo" : {
 
         },
-        "bind" : "[::]:7966"
+        "bind" : "[::]:22378"
       }
     ]
   },
   "admin" : {
-    "password" : "NONE",
-    "bind" : "127.0.0.1:11234"
+    "password" : {{admin_password}},
+    "bind" : {{admin_bind}}
   },
   "authorizedPasswords" : [
     {
       "user" : "default-login",
-      "password" : "t5y23u1cu8h819f51f23csgcd7lh3ks"
+      "password" : "4y7wkug024z30k7vtqzusj5dn6m16jd"
     }
   ],
-  "ipv6" : "fcbe:77ac:b3e8:d2f:ba15:5af6:5b0a:4ae6",
-  "publicKey" : "g4tgjyb20sc30ctzlnhs6q52v62jquvxgw99lcwfbd3mhl1uv4s0.k",
-  "privateKey" : "550b7daf7336da80ab2446217ea05fb66864022014208f194c90fc2433b309af"
+  "ipv6" : "{{_ipv6}}",
+  "publicKey" : "{{_publicKey}}",
+  "privateKey" : "{{_privateKey}}"
 }
