@@ -39,32 +39,14 @@
     }
   },
   "interfaces" : {
-    "UDPInterface" : [
-      {
-        "connectTo" : {
-
-        },
-        "bind" : "0.0.0.0:22378"
-      },
-      {
-        "connectTo" : {
-
-        },
-        "bind" : "[::]:22378"
-      }
-    ]
+    "UDPInterface" : {{interfaces}}
   },
   "admin" : {
-    "password" : {{admin_password}},
-    "bind" : {{admin_bind}}
+    "password" : "NONE",
+    "bind" : "127.0.0.1:11234"
   },
-  "authorizedPasswords" : [
-    {
-      "user" : "default-login",
-      "password" : "4y7wkug024z30k7vtqzusj5dn6m16jd"
-    }
-  ],
-  "ipv6" : "{{_ipv6}}",
-  "publicKey" : "{{_publicKey}}",
-  "privateKey" : "{{_privateKey}}"
+  "authorizedPasswords" : {{authorizedPasswords}},
+  "ipv6" : "{{ipv6}}",
+  "publicKey" : "{{publicKey}}",
+  "privateKey" : "{{privateKey}}"
 }

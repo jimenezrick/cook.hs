@@ -46,7 +46,6 @@ library
                      , transformers
                      , mtl
                      , mmorph
-                     , lens
                      , unix
                      , network
                      , directory

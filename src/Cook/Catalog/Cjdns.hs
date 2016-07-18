@@ -1,9 +1,9 @@
 module Cook.Catalog.Cjdns (
-    requireCjdns
+    CjdnsOpts (..)
+  , requireCjdns
   ) where
 
 import Data.Aeson
-import Data.Aeson.Types
 import Data.ByteString (ByteString)
 import Data.FileEmbed
 import Data.Text (Text)
@@ -19,15 +19,16 @@ import Cook.Catalog.Systemd
 --
 
 data CjdnsOpts = CjdnsOpts
-    { _privateKey :: Text
-    , _publicKey  :: Text
-    , _ipv6       :: Text
+    { privateKey          :: Text
+    , publicKey           :: Text
+    , ipv6                :: Text
+    , authorizedPasswords :: Object
+    , interfaces          :: Object
     } deriving (Show, Generic)
 
 instance ToJSON CjdnsOpts
 
-instance FromJSON CjdnsOpts where
-    parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = drop 1 }
+instance FromJSON CjdnsOpts
 
 confTemplate :: ByteString
 confTemplate = $(embedFile "templates/cjdns/cjdroute.conf.mustache")
