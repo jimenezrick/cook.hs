@@ -22,6 +22,7 @@ module Cook.Recipe (
 
   , withRecipeName
   , withCd
+  , withEnv
   , withoutError
   , withSudo
   , withSudoUser
@@ -49,13 +50,14 @@ import Data.Maybe
 import Data.Text.Lazy (Text, empty)
 import Network.BSD
 import System.Directory
-import System.Environment (lookupEnv)
+import System.Environment (lookupEnv, getEnvironment)
 import System.Exit
 import System.FilePath
 import System.IO
 import System.Process (CreateProcess (..))
 import Text.Printf
 
+import qualified Data.Map.Strict as M
 import qualified Data.Text.Lazy.IO as T
 import qualified System.Process as P
 import qualified System.Process.Text.Lazy as PT
@@ -78,6 +80,7 @@ data ExecPrivileges = ExecNormal
 data Ctx = Ctx {
     ctxRecipeNames :: [String]
   , ctxCwd         :: Maybe FilePath
+  , ctxEnv         :: Maybe [(String, String)]
   , ctxTrace       :: Trace
   , ctxSudo        :: ExecPrivileges
   , ctxRecipeConf  :: RecipeConf
@@ -112,6 +115,15 @@ defRecipeConf = do
 
 recipeConf :: Recipe RecipeConf
 recipeConf = gets ctxRecipeConf
+
+procEnv :: Recipe (Maybe [(String, String)])
+procEnv = do
+    env <- gets ctxEnv
+    case env of
+        Nothing   -> return Nothing
+        Just env' -> do
+            penv <- liftIO getEnvironment
+            return . Just . M.toList . M.fromList $ (penv ++ env')
 
 createFsTree :: FilePath -> F.FsTree -> Recipe ()
 createFsTree base fstree = liftIO $ F.createFsTree base fstree -- TODO: Catch IO errors
@@ -165,6 +177,9 @@ withCd dir = withCtx (chdir dir)
                      case ctxCwd ctx of
                          Nothing -> ctx { ctxCwd = Just to }
                          Just d' -> ctx { ctxCwd = Just $ d' </> to }
+
+withEnv :: [(String, String)] -> Recipe a -> Recipe a
+withEnv env = withCtx (\ctx -> ctx { ctxEnv = Just env })
 
 withoutError :: Recipe a -> Recipe (Either Code a)
 withoutError recipe = (Right <$> recipe) `catchError` \(_, code) -> return $ Left code
@@ -224,7 +239,8 @@ runSh = run . sh
 runWith :: CreateProcess -> Recipe ()
 runWith p = do
     dir <- gets ctxCwd
-    (_, _, _, ph) <- liftIO $ P.createProcess p { cwd = dir }
+    env <- procEnv
+    (_, _, _, ph) <- liftIO $ P.createProcess p { cwd = dir, env = env }
     exit <- liftIO $ P.waitForProcess ph
     case exit of
         ExitFailure code -> do
@@ -250,7 +266,8 @@ runTakeRead step input = do
 runTakeReadWith :: CreateProcess -> Text -> Recipe (Text, Text)
 runTakeReadWith p input = do
     dir <- gets ctxCwd
-    (exit, out, err) <- liftIO $ PT.readCreateProcessWithExitCode p { cwd = dir } input
+    env <- procEnv
+    (exit, out, err) <- liftIO $ PT.readCreateProcessWithExitCode p { cwd = dir, env = env } input
     case exit of
         ExitFailure code -> do
             trc <- gets ctxTrace
@@ -262,6 +279,7 @@ runRecipe conf recipe = do
     let ctx = Ctx {
         ctxRecipeNames = []
       , ctxCwd         = Nothing
+      , ctxEnv         = Nothing
       , ctxTrace       = mempty
       , ctxSudo        = ExecNormal
       , ctxRecipeConf  = conf

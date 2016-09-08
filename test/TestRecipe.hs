@@ -8,7 +8,7 @@ import Cook.Catalog.Systemd.Container
 import Cook.Catalog.Cjdns
 
 main :: IO ()
-main = testCjdns
+main = testEnv
 
 main' :: IO ()
 main' = do
@@ -56,3 +56,13 @@ testCjdns = do
     conf <- defRecipeConf
     runRecipe conf $ do
         requireCjdns "cjdroute.conf.yaml"
+
+testEnv :: IO ()
+testEnv = do
+    conf <- defRecipeConf
+    runRecipe conf $ do
+        withEnv [("A", "666"), ("USER", "foo")] $ do
+            runSh "echo $HOME"
+            runSh "echo $USER"
+            runSh "echo $A"
+        runSh "echo $USER"
