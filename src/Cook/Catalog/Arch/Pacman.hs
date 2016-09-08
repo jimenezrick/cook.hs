@@ -1,7 +1,6 @@
 module Cook.Catalog.Arch.Pacman (
-    upgradeInstalledPackages
+    upgradePackages
   , installPackages
-  , isPackageInstalled
   , requirePackages
   ) where
 
@@ -14,8 +13,8 @@ import Cook.Recipe
 pacman :: NonEmpty String -> Step
 pacman args = proc "pacman" $ toList $ ["--quiet", "--noconfirm"] <> args
 
-upgradeInstalledPackages :: Recipe ()
-upgradeInstalledPackages = withRecipeName "Arch.Pacman.UpgradeInstalledPackages" $ do
+upgradePackages :: Recipe ()
+upgradePackages = withRecipeName "Arch.Pacman.UpgradePackages" $ do
     run $ pacman ["-Syu"]
 
 installPackages :: NonEmpty String -> Recipe ()
@@ -33,5 +32,6 @@ requirePackages pkgs = withRecipeName "Arch.Pacman.RequirePackages" $ do
     missingPkgs <- filterM (fmap not . isPackageInstalled) $ toList pkgs
     case missingPkgs of
         [] -> return ()
-        _  -> do upgradeInstalledPackages
-                 installPackages $ fromList missingPkgs
+        _  -> do
+            upgradePackages
+            installPackages $ fromList missingPkgs
