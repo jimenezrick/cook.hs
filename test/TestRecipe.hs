@@ -8,7 +8,7 @@ import Cook.Catalog.Systemd.Container
 import Cook.Catalog.Cjdns
 
 main :: IO ()
-main = testEnv
+main = testCjdns
 
 main' :: IO ()
 main' = do

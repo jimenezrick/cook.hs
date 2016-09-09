@@ -22,8 +22,8 @@ data CjdnsOpts = CjdnsOpts
     { privateKey          :: Text
     , publicKey           :: Text
     , ipv6                :: Text
-    , authorizedPasswords :: Object
-    , interfaces          :: Object
+    , authorizedPasswords :: Array
+    , udpInterface        :: Array
     } deriving (Show, Generic)
 
 instance ToJSON CjdnsOpts

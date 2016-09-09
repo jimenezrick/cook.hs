@@ -6,8 +6,8 @@ authorizedPasswords:
   - user: default-login
     password: xyz
 
-interfaces:
+udpInterface:
   - connectTo:
-    bind: 0.0.0.0:22378
+    bind: "0.0.0.0:22378"
   - connectTo:
-    bind: [::]:22378
+    bind: "[::]:22378"
