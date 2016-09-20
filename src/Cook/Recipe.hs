@@ -33,6 +33,7 @@ module Cook.Recipe (
   , runRecipeConf
   , failWith
   , failWith'
+  , catchException
 
   , F.FsTree (..)
   , F.Content (..)
@@ -43,6 +44,7 @@ module Cook.Recipe (
   , getEnv
   ) where
 
+import Control.Exception.Lifted
 import Control.Monad.Except
 import Control.Monad.Morph
 import Control.Monad.State
@@ -127,7 +129,7 @@ procEnv = do
             return . Just . M.toList . M.fromList $ (penv ++ env')
 
 createFsTree :: FilePath -> F.FsTree -> Recipe ()
-createFsTree base fstree = liftIO $ F.createFsTree base fstree -- TODO: Catch IO errors
+createFsTree base fstree = catchException . liftIO $ F.createFsTree base fstree
 
 proc :: FilePath -> [String] -> Step
 proc = Proc
@@ -147,6 +149,9 @@ failWith' :: Code -> Recipe a
 failWith' code = do
     trc <- gets ctxTrace
     throwError (trc, code)
+
+catchException :: Recipe a -> Recipe a
+catchException = handle (\e -> failWith $ show (e :: SomeException))
 
 withCtx :: (Ctx -> Ctx) -> Recipe a -> Recipe a
 withCtx f recipe = do

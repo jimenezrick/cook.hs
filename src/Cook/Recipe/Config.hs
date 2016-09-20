@@ -22,8 +22,8 @@ import qualified Data.Yaml as Y
 import Cook.Recipe
 
 loadConfig :: FromJSON a => FilePath -> Recipe a
-loadConfig path = do
-    conf <- liftIO $ B.readFile path -- TODO: Catch IO error
+loadConfig path = catchException $ do
+    conf <- liftIO $ B.readFile path
     case decode conf of
         Left err  -> failWith err
         Right obj -> return obj
@@ -49,5 +49,6 @@ insertConfigInto _ _ _ = error "Recipe.Config.insertConfigInto: expecting an obj
 
 -- TODO: support Yaml
 writeConfig :: ToJSON a => FilePath -> a -> Recipe ()
-writeConfig path conf = liftIO $ B.writeFile path $ A.encodePretty' prettyConf conf
+writeConfig path conf = catchException $ do
+    liftIO $ B.writeFile path $ A.encodePretty' prettyConf conf
   where prettyConf = A.defConfig { A.confCompare = A.compare }

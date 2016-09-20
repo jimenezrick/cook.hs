@@ -45,6 +45,7 @@ library
                      , unordered-containers
                      , data-default
                      , semigroups
+                     , lifted-base
                      , filepath
                      , text
                      , transformers
