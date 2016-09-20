@@ -1,9 +1,12 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 import Control.Monad.IO.Class
 import Data.Text.Lazy
 
 import qualified Data.Text.Lazy.IO as T
 
 import Cook.Recipe
+import Cook.Recipe.Config
 import Cook.Catalog.Systemd.Container
 import Cook.Catalog.Cjdns
 
@@ -66,8 +69,7 @@ testEnv = do
 testConfig :: IO ()
 testConfig = do
     runRecipe $ do
-        withEnv [("A", "666"), ("USER", "foo")] $ do
-            runSh "echo $HOME"
-            runSh "echo $USER"
-            runSh "echo $A"
-        runSh "echo $USER"
+        a <- loadConfig "/tmp/a.json"
+        conf <- loadConfig "/tmp/c.json"
+        writeConfig "/tmp/out.json" (insertConfigWithKey ["logging", "foo"] a conf)
+        writeConfig "/tmp/out.json" (mergeConfig a conf)

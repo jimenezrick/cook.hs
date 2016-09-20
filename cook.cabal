@@ -22,6 +22,7 @@ library
                      , DeriveDataTypeable
                      , DeriveGeneric
                      , ScopedTypeVariables
+                     , RankNTypes
                      , GADTs
   hs-source-dirs:      src
   exposed-modules:     Cook.Recipe
@@ -41,6 +42,7 @@ library
   build-depends:       base >=4.8 && <5
                      , bytestring
                      , containers
+                     , unordered-containers
                      , data-default
                      , semigroups
                      , filepath
@@ -56,8 +58,11 @@ library
                      , uuid
                      , yaml
                      , aeson
+                     , aeson-pretty
                      , mustache
                      , file-embed
+                     , lens
+                     , lens-aeson
 
 executable cook
   ghc-options:         -Wall
