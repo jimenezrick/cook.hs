@@ -1,0 +1,203 @@
+{
+    "104.200.29.163:53053": {
+        "contact": "ansuz@transitiontech.ca",
+        "gpg": "024A7C03E67ED8CF",
+        "password": "cLjDBorhsYJUmJrESGueHsRY4HXcFyj",
+        "peerName": "transitiontech",
+        "publicKey": "1941p5k8qqvj17vjrkb9z97wscvtgc1vp8pv1huk5120cu42ytt0.k"
+    },
+    "107.170.57.34:63472": {
+        "contact": "code@ventricle.us",
+        "gpg": "7FE895160E3314027CD3B5D37392CF088BB4345C",
+        "location": "digitalocean nyc2",
+        "login": "public-peer",
+        "password": "ppm6j89mgvss7uvtntcd9scy6166mwb",
+        "peerName": "Jacob Henner",
+        "publicKey": "1xkf13m9r9h502yuffsq1cg13s5648bpxrtf2c3xcq1mlj893s90.k"
+    },
+    "130.240.202.22:49960": {
+        "contact": "william@willeponken.me",
+        "gpg": "DECA60149478ECFE",
+        "login": "public-peer",
+        "password": "y4j84802yfyxpzrtbzbwtj3hd1l9mrc",
+        "peerName": "bliss.willeponken.me",
+        "publicKey": "tpf7pdj6pby9r2smxuwmkvzfrfj6jb0brch8yhp3jsxbrf3ld0h0.k"
+    },
+    "139.162.219.143:2331": {
+        "contact": "ansuz@transitiontech.ca",
+        "gpg": "024A7C03E67ED8CF",
+        "password": "CJ36KhxxO7nmfCy1kVB27rhwlWgnG95i",
+        "publicKey": "bddc5j6sc45hlrdnccu120zwnmm2z0qlbfkxn9n8xbs0vqgx9fh0.k",
+        "user": "ansuz"
+    },
+    "146.185.162.175:46398": {
+        "contact": "info@florianb.space",
+        "login": "public",
+        "password": "meshwithme",
+        "peerName": "florianb",
+        "publicKey": "g2xyf69w70q4q2nzfyhs5ybdhpgx0uz56zxqlj27g2ytnklqvxv0.k"
+    },
+    "149.56.19.79:55159": {
+        "contact": "infrastructure@stashcrypto.com",
+        "login": "default-login",
+        "password": "dgv86ktpblc2h4y93fsqpshcg2lbp5d",
+        "peerName": "git.stashcrypto.net",
+        "publicKey": "zbfurpx9n6whzwu6vrlfgmw8g56rmchfmhxxtpg0hwhl84vqf1y0.k"
+    },
+    "158.69.119.35:9218": {
+        "contact": "infrastructure@stashcrypto.com",
+        "login": "default-login",
+        "password": "w5huch4mn6tkgfp3j9sr8p8r13j3j33",
+        "peerName": "seed.stashcrypto.net",
+        "publicKey": "rzg61b3fsb675732g5rn8g1x61ypm1z7402n072qmrbbhgzm93f0.k"
+    },
+    "173.62.245.186:55249": {
+        "contact": "natebrune@gmail.com",
+        "country": "us",
+        "gpg": "C95CE6BC6735BAD7",
+        "ipv6": "fcda:9958:9093:49f2:2677:6df6:2a5a:b01d",
+        "password": "Public",
+        "peerName": "NAT",
+        "publicKey": "vgxqyputh4ldhxktg9msmr61pw938l0ymhkmryljsyzvmr0dtwy0.k",
+        "website": "https://github.com/NateBrune"
+    },
+    "176.9.105.201:4464": {
+        "contact": "webmaster@jazzanet.com",
+        "login": "public",
+        "password": "ir88xwtel72fen3ch7aug603s26nu3a",
+        "peerName": "jazzanet",
+        "publicKey": "yrgb0xwfr9pz8swvnv6m9by8zw7v7uxxhl07qz318cjuvfgs1fc0.k"
+    },
+    "185.125.216.67:24297": {
+        "contact": "contact@bunjlabs.com",
+        "login": "default-login",
+        "password": "c5q2j63x5nkmt2yg2vjmlnfuh1jnjjf",
+        "peerName": "h.bunjlabs.com",
+        "publicKey": "5dkw4x4tczb6x164qklggbgfy35cs5uxjl6tyyu4slu7nm4062q0.k"
+    },
+    "188.166.3.174:4841": {
+        "contact": "oniichan@mrowr.me",
+        "password": "public-20150903-6pb6aEKDDKVr9zsBJIyDUYfrXYzQv1",
+        "publicKey": "s680fh7g69ww3y9cmrxt910u5hvrwrmcnln1sz6mq1jk5mquq8k0.k",
+        "user": "katt"
+    },
+    "188.226.183.183:43328": {
+        "contact": "hype@smash-net.org",
+        "password": "public_access",
+        "publicKey": "1y1jmqrw4r31jlp6yqmq30067rcp0tsgsdm3cs4k8l33pyfhpwn0.k",
+        "user": "weuxel"
+    },
+    "192.169.7.142:14400": {
+        "contact": "Igel@hyperboria.ca",
+        "gpg": "A84DFFE62B451511",
+        "password": "alfa-charlie-alfa-bravo",
+        "peerName": "igel-losangeles",
+        "publicKey": "mh9m0411cfcg7xhdc8n6ckls1tjgnvvbdfzdgqf5196tfkw96rr0.k"
+    },
+    "192.198.82.242:27823": {
+        "contact": "Igel@hyperboria.ca",
+        "gpg": "A84DFFE62B451511",
+        "password": "alfa-charlie-alfa-bravo",
+        "peerName": "igel-northcarolina",
+        "publicKey": "1nctdb89gtfrlnu71zyq97n14frl1r4z0ylwzc8vn7kpvrzu4yl0.k"
+    },
+    "192.241.171.154:62718": {
+        "contact": "hype@smash-net.org",
+        "password": "public_access",
+        "publicKey": "q5nhj9kg6ddmk571jb259mct2ljd10z9xvyf05y3hu66wk4qnk20.k",
+        "user": "weuxel"
+    },
+    "195.177.253.230:31545": {
+        "contact": "hostmaster@cwningen.cymru",
+        "gpg": "B60E86E6",
+        "login": "public-peer",
+        "password": "txxjhyblpsfg6v50gs6h70nxk793zlk",
+        "peerName": "wisgers.cwningen.cymru",
+        "publicKey": "yck8q799rrf6hcb29xryfrrzjgblw1xvc0nxv2xbqqv86p0k0c90.k"
+    },
+    "46.235.225.176:31545": {
+        "contact": "hostmaster@cwningen.cymru",
+        "gpg": "B60E86E6",
+        "login": "public-peer",
+        "password": "p0w2yzku3lj126fs2z1wrlt1w684dzw",
+        "peerName": "llygaid.cwningen.cymru",
+        "publicKey": "8268mn1bvz66nbb74tqw7ynjkcjrtruv8pgjf9kr34zv5d60p3r0.k"
+    },
+    "51.254.25.16:1132": {
+        "contact": "me@magik6k.net",
+        "password": "thah9aePha1Vusha6ovhpublic",
+        "peerName": "Magik6k-sbg1",
+        "publicKey": "kw0vfw3tmb6u6p21z5jmmymdlumwknlg3x8muk5mcw66tdpqlw30.k"
+    },
+    "68.96.80.118:64137": {
+        "contact": "kylerschin@gmail.com",
+        "login": "default-login",
+        "password": "34pq18yfsc40yy360hz191u807gk6fk",
+        "peerName": "h.glitchedpixels.com",
+        "publicKey": "tfxxckg18zfxrb3xs3p4f7d9xgxscg13v2zwtjh6ndn704n816l0.k"
+    },
+    "81.4.125.34:64512": {
+        "contact": "post@0x21.biz",
+        "gpg": "F32A45637FA25E31",
+        "login": "public",
+        "password": "OGMlsucXQ4G2VkFUGLgpaUcG7XJcF6PMoX",
+        "peerName": "ancha.lurk.space",
+        "publicKey": "c5bu0npp8by4jym96mh0vyy81sn9lhbc01f445nvz64dvdjt98j0.k"
+    },
+    "93.93.129.43:31545": {
+        "contact": "hostmaster@cwningen.cymru",
+        "gpg": "B60E86E6",
+        "login": "public-peer",
+        "password": "p0zk85ff2lk3zbvgypzr1tvbu1gnlkc",
+        "peerName": "penfar.cwningen.cymru",
+        "publicKey": "7ktfb2n336bguhfx81ts15qgjb8mjj4rz3vrnvj2dw89wsmmtpg0.k"
+    },
+    "[2001:470:1f15:156::31]:64512": {
+        "contact": "post@0x21.biz",
+        "gpg": "F32A45637FA25E31",
+        "login": "public",
+        "password": "OGMlsucXQ4G2VkFUGLgpaUcG7XJcF6PMoX",
+        "peerName": "ancha.lurk.space",
+        "publicKey": "c5bu0npp8by4jym96mh0vyy81sn9lhbc01f445nvz64dvdjt98j0.k"
+    },
+    "[2001:67c:2990:a00::2eeb:e1b0]:31545": {
+        "contact": "hostmaster@cwningen.cymru",
+        "gpg": "B60E86E6",
+        "login": "public-peer",
+        "password": "p0w2yzku3lj126fs2z1wrlt1w684dzw",
+        "peerName": "llygaid.cwningen.cymru",
+        "publicKey": "8268mn1bvz66nbb74tqw7ynjkcjrtruv8pgjf9kr34zv5d60p3r0.k"
+    },
+    "[2001:67c:2990:b00::5d5d:812b]:31545": {
+        "contact": "hostmaster@cwningen.cymru",
+        "gpg": "B60E86E6",
+        "login": "public-peer",
+        "password": "p0zk85ff2lk3zbvgypzr1tvbu1gnlkc",
+        "peerName": "penfar.cwningen.cymru",
+        "publicKey": "7ktfb2n336bguhfx81ts15qgjb8mjj4rz3vrnvj2dw89wsmmtpg0.k"
+    },
+    "[2001:67c:2990:d00::c375:fde6]:31545": {
+        "contact": "hostmaster@cwningen.cymru",
+        "gpg": "B60E86E6",
+        "login": "public-peer",
+        "password": "txxjhyblpsfg6v50gs6h70nxk793zlk",
+        "peerName": "wisgers.cwningen.cymru",
+        "publicKey": "yck8q799rrf6hcb29xryfrrzjgblw1xvc0nxv2xbqqv86p0k0c90.k"
+    },
+    "[2604:a880:0:1010::f:4001]:63472": {
+        "contact": "code@ventricle.us",
+        "gpg": "7FE895160E3314027CD3B5D37392CF088BB4345C",
+        "location": "digitalocean nyc2",
+        "login": "public-peer",
+        "password": "ppm6j89mgvss7uvtntcd9scy6166mwb",
+        "peerName": "Jacob Henner",
+        "publicKey": "1xkf13m9r9h502yuffsq1cg13s5648bpxrtf2c3xcq1mlj893s90.k"
+    },
+    "[2607:5300:61:44f::]:55159": {
+        "contact": "infrastructure@stashcrypto.com",
+        "login": "default-login",
+        "password": "dgv86ktpblc2h4y93fsqpshcg2lbp5d",
+        "peerName": "git.stashcrypto.net",
+        "publicKey": "zbfurpx9n6whzwu6vrlfgmw8g56rmchfmhxxtpg0hwhl84vqf1y0.k"
+    }
+}
