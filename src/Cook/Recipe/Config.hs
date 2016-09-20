@@ -8,7 +8,7 @@ module Cook.Recipe.Config (
 
 import Control.Lens
 import Control.Monad.IO.Class
-import Data.Aeson
+import Data.Aeson (FromJSON, ToJSON, Value (..))
 import Data.Aeson.Lens
 import Data.Text (Text)
 import System.FilePath
@@ -21,33 +21,16 @@ import qualified Data.Yaml as Y
 
 import Cook.Recipe
 
---
--- TODO: Use recipeConfRootDir to load a relative path from there
---
-
--- FIXME: merge both code paths
 loadConfig :: FromJSON a => FilePath -> Recipe a
-loadConfig path
-  | takeExtension path == ".json" = loadJSONConfig path
-  | takeExtension path == ".yaml" = loadYAMLConfig path
-  | otherwise                     = failWith "Unsupported config format"
-
-loadJSONConfig :: FromJSON a => FilePath -> Recipe a
-loadJSONConfig path = do
+loadConfig path = do
     conf <- liftIO $ B.readFile path -- TODO: Catch IO error
-    case A.eitherDecode conf of
+    case decode conf of
         Left err  -> failWith err
         Right obj -> return obj
-
-loadYAMLConfig :: FromJSON a => FilePath -> Recipe a
-loadYAMLConfig path = do
-    conf <- liftIO $ B.readFile path -- TODO: Catch IO error
-    case Y.decodeEither' (B.toStrict conf) of
-        Left err  -> failWith $ show err
-        Right obj -> return obj
-
-
-
+  where decode
+            | takeExtension path == ".json" = A.eitherDecode
+            | takeExtension path == ".yaml" = Y.decodeEither . B.toStrict
+            | otherwise                     = const $ Left "Unsupported config format"
 
 mergeConfig :: Value -> Value -> Value
 mergeConfig (Object replace) (Object obj) = Object $ H.union replace obj

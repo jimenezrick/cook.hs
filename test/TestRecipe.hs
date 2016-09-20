@@ -68,7 +68,7 @@ testEnv = do
 
 testConfig :: IO ()
 testConfig = do
-    runRecipe $ do
+    runRecipe $ withRecipeName "Test" $ withRecipeName "Config" $ do
         a <- loadConfig "/tmp/a.json"
         conf <- loadConfig "/tmp/c.json"
         writeConfig "/tmp/out.json" (insertConfigWithKey ["logging", "foo"] a conf)
