@@ -8,12 +8,11 @@ import Cook.Catalog.Systemd.Container
 import Cook.Catalog.Cjdns
 
 main :: IO ()
-main = testCjdns
+main = testConfig
 
 main' :: IO ()
 main' = do
-    conf <- defRecipeConf
-    runRecipe conf $ withRecipeName "main" $ do
+    runRecipe $ withRecipeName "main" $ do
         {-
          -withSudo $ runProc' "id"
          -withSudoUser "nobody" $ runProc' "id"
@@ -42,8 +41,7 @@ foo = withRecipeName "foo" $ withCd "/tmp" $ do
 
 testContainer :: IO ()
 testContainer = do
-    conf <- defRecipeConf
-    runRecipe conf $ do
+    runRecipe $ do
         createFsTree "/tmp" $ DirEmpty "CONTAINER" defAttrs
         withSudo $ do
             path <- makeArchLinuxRootFs "/tmp/CONTAINER"
@@ -53,14 +51,21 @@ testContainer = do
 
 testCjdns :: IO ()
 testCjdns = do
-    conf <- defRecipeConf
-    runRecipe conf $ do
+    runRecipe $ do
         requireCjdns "cjdroute.conf.yaml"
 
 testEnv :: IO ()
 testEnv = do
-    conf <- defRecipeConf
-    runRecipe conf $ do
+    runRecipe $ do
+        withEnv [("A", "666"), ("USER", "foo")] $ do
+            runSh "echo $HOME"
+            runSh "echo $USER"
+            runSh "echo $A"
+        runSh "echo $USER"
+
+testConfig :: IO ()
+testConfig = do
+    runRecipe $ do
         withEnv [("A", "666"), ("USER", "foo")] $ do
             runSh "echo $HOME"
             runSh "echo $USER"

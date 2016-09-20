@@ -30,6 +30,7 @@ module Cook.Recipe (
   , defRecipeConf
   , recipeConf
   , runRecipe
+  , runRecipeConf
   , failWith
   , failWith'
 
@@ -274,8 +275,13 @@ runTakeReadWith p input = do
             throwError (trc, code)
         _ -> return (out, err)
 
-runRecipe :: RecipeConf -> Recipe a -> IO ()
-runRecipe conf recipe = do
+runRecipe :: Recipe a -> IO ()
+runRecipe recipe = do
+    conf <- defRecipeConf
+    runRecipeConf conf recipe
+
+runRecipeConf :: RecipeConf -> Recipe a -> IO ()
+runRecipeConf conf recipe = do
     let ctx = Ctx {
         ctxRecipeNames = []
       , ctxCwd         = Nothing
@@ -288,7 +294,7 @@ runRecipe conf recipe = do
         hPrintf stderr "Cook: running with %s\n" (show conf)
     r <- flip evalStateT ctx $ runExceptT recipe
     case r of
-        Left ([], _)                   -> error "Recipe.runRecipe: empty trace"
+        Left ([], _)                   -> error "Recipe.runRecipeConf: empty trace"
         Left (trc@((_, ctx'):_), code) -> do
             printTrace (recipeTraceLength conf) trc
             hPrintf stderr "Cook: process exited with code %d\n" code
