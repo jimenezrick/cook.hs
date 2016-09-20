@@ -11,39 +11,34 @@ import Control.Monad.IO.Class
 import Data.Aeson (FromJSON, ToJSON, Value (..))
 import Data.Aeson.Lens
 import Data.Text (Text)
-import System.FilePath
 
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Encode.Pretty as A
 import qualified Data.ByteString.Lazy as B
 import qualified Data.HashMap.Strict as H
+import qualified Data.Text.Encoding as T
 import qualified Data.Yaml as Y
 import qualified Data.Yaml.Pretty as Y
 
 import Cook.Recipe
 
-loadConfig :: FromJSON a => FilePath -> Recipe a
-loadConfig path = catchException $ do
+data ConfigType = JSON | YAML
+
+loadConfig :: FromJSON a => ConfigType -> FilePath -> Recipe a
+loadConfig typ path = catchException $ do
     conf <- liftIO $ B.readFile path
-    case decode conf of
+    case decode typ conf of
         Left err  -> failWith err
         Right obj -> return obj
-  where decode
-            | takeExtension path == ".json" = A.eitherDecode
-            | takeExtension path == ".yaml" = Y.decodeEither . B.toStrict
-            | otherwise                     = const $ Left "Unsupported config format"
+  where decode JSON = A.eitherDecode
+        decode YAML = Y.decodeEither . B.toStrict
 
-writeConfig :: ToJSON a => FilePath -> a -> Recipe ()
-writeConfig path conf = catchException $ do
-    case encode conf of
-        Left err -> failWith err
-        Right b  -> liftIO $ B.writeFile path b
-  where encode
-            | takeExtension path == ".json" = Right . A.encodePretty' prettyJSON
-            | takeExtension path == ".yaml" = Right . B.fromStrict . Y.encodePretty prettyYAML
-            | otherwise                     = const $ Left "Unsupported config format"
-        prettyJSON = A.defConfig { A.confCompare = A.compare }
-        prettyYAML = Y.setConfCompare A.compare Y.defConfig
+writeConfig :: ToJSON a => ConfigType -> a -> Recipe Text
+writeConfig typ conf = return . T.decodeUtf8 $ encode typ conf
+  where encode JSON = B.toStrict . A.encodePretty' prettyJSON
+        encode YAML = Y.encodePretty prettyYAML
+        prettyJSON  = A.defConfig { A.confCompare = A.compare }
+        prettyYAML  = Y.setConfCompare A.compare Y.defConfig
 
 mergeConfig :: Value -> Value -> Value
 mergeConfig (Object replace) (Object obj) = Object $ H.union replace obj

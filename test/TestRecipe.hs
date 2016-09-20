@@ -11,7 +11,7 @@ import Cook.Catalog.Systemd.Container
 import Cook.Catalog.Cjdns
 
 main :: IO ()
-main = testConfig
+main = testCjdns
 
 main' :: IO ()
 main' = do
@@ -65,11 +65,3 @@ testEnv = do
             runSh "echo $USER"
             runSh "echo $A"
         runSh "echo $USER"
-
-testConfig :: IO ()
-testConfig = do
-    runRecipe $ withRecipeName "Test" $ withRecipeName "Config" $ do
-        a <- loadConfig "/tmp/a.json"
-        conf <- loadConfig "/tmp/c.json"
-        writeConfig "/tmp/out.json" (insertConfigWithKey ["logging", "foo"] a conf)
-        writeConfig "/tmp/out.json" (mergeConfig a conf)
