@@ -18,6 +18,7 @@ import qualified Data.Aeson.Encode.Pretty as A
 import qualified Data.ByteString.Lazy as B
 import qualified Data.HashMap.Strict as H
 import qualified Data.Yaml as Y
+import qualified Data.Yaml.Pretty as Y
 
 import Cook.Recipe
 
@@ -31,6 +32,18 @@ loadConfig path = catchException $ do
             | takeExtension path == ".json" = A.eitherDecode
             | takeExtension path == ".yaml" = Y.decodeEither . B.toStrict
             | otherwise                     = const $ Left "Unsupported config format"
+
+writeConfig :: ToJSON a => FilePath -> a -> Recipe ()
+writeConfig path conf = catchException $ do
+    case encode conf of
+        Left err -> failWith err
+        Right b  -> liftIO $ B.writeFile path b
+  where encode
+            | takeExtension path == ".json" = Right . A.encodePretty' prettyJSON
+            | takeExtension path == ".yaml" = Right . B.fromStrict . Y.encodePretty prettyYAML
+            | otherwise                     = const $ Left "Unsupported config format"
+        prettyJSON = A.defConfig { A.confCompare = A.compare }
+        prettyYAML = Y.setConfCompare A.compare Y.defConfig
 
 mergeConfig :: Value -> Value -> Value
 mergeConfig (Object replace) (Object obj) = Object $ H.union replace obj
@@ -46,9 +59,3 @@ insertConfigWithKey _ _ _ = error "Recipe.Config.insertConfigWithKey: expecting 
 insertConfigInto :: Traversal' Value Value -> Value -> Value -> Value
 insertConfigInto place v o@(Object _) = o & place .~ v
 insertConfigInto _ _ _ = error "Recipe.Config.insertConfigInto: expecting an object to insert a value"
-
--- TODO: support Yaml
-writeConfig :: ToJSON a => FilePath -> a -> Recipe ()
-writeConfig path conf = catchException $ do
-    liftIO $ B.writeFile path $ A.encodePretty' prettyConf conf
-  where prettyConf = A.defConfig { A.confCompare = A.compare }
