@@ -10,15 +10,15 @@ import Network.HTTP.Simple
 import Cook.Recipe
 
 withTempDir :: Recipe a -> Recipe a
-withTempDir recipe = do
-    (tmpDir, _) <- runRead $ proc "mktemp" ["-d", "cook-XXXXXX"]
-    let tmpDir' = unpack tmpDir
+withTempDir recipe = withRecipeName "WithTempDir" $ do
+    (tmpDir, _) <- runRead $ proc "mktemp" ["--tmpdir", "--directory", "cook-XXXXXX"]
+    let tmpDir' = head . lines $ unpack tmpDir
     a <- withCd tmpDir' recipe
     runProc "rm" ["-rf", tmpDir']
     return a
 
 getHTTP :: String -> Recipe ByteString
-getHTTP url = catchException $ do
+getHTTP url = withRecipeName "GetHTTP" $ catchException $ do
     req <- parseRequest url
     res <- httpLBS req
     return $ getResponseBody res
