@@ -13,12 +13,16 @@ module Cook.Recipe (
   , runSh
   , runWith
   , runRead
+  , runRead'
   , runReadWith
   , runTakeRead
+  , runTakeRead'
   , runTakeReadWith
   , runPipe
   , runPipeRead
+  , runPipeRead'
   , runPipeTakeRead
+  , runPipeTakeRead'
 
   , withRecipeName
   , withCd
@@ -48,9 +52,11 @@ import Control.Exception.Lifted
 import Control.Monad.Except
 import Control.Monad.Morph
 import Control.Monad.State
+import Data.ByteString.Lazy (ByteString, empty)
 import Data.List
+import Data.List.NonEmpty (NonEmpty, toList)
 import Data.Maybe
-import Data.Text.Lazy (Text, empty)
+import Data.Text.Lazy (Text)
 import Network.BSD
 import System.Directory
 import System.Environment (lookupEnv, getEnvironment)
@@ -61,9 +67,11 @@ import System.Process (CreateProcess (..))
 import Text.Printf
 
 import qualified Data.Map.Strict as M
+import qualified Data.Text.Lazy as T
+import qualified Data.Text.Lazy.Encoding as T
 import qualified Data.Text.Lazy.IO as T
 import qualified System.Process as P
-import qualified System.Process.Text.Lazy as PT
+import qualified System.Process.ByteString.Lazy as PB
 
 import qualified Cook.Recipe.FsTree as F
 
@@ -254,13 +262,21 @@ runWith p = do
         _ -> return ()
 
 runRead :: Step -> Recipe (Text, Text)
-runRead step = runTakeRead step empty
+runRead step = runTakeRead step T.empty
 
-runReadWith :: CreateProcess -> Recipe (Text, Text)
+runRead' :: Step -> Recipe (ByteString, ByteString)
+runRead' step = runTakeRead' step empty
+
+runReadWith :: CreateProcess -> Recipe (ByteString, ByteString)
 runReadWith p = runTakeReadWith p empty
 
 runTakeRead :: Step -> Text -> Recipe (Text, Text)
 runTakeRead step input = do
+    (out, err) <- runTakeRead' step $ T.encodeUtf8 input
+    return (T.decodeUtf8 out, T.decodeUtf8 err)
+
+runTakeRead' :: Step -> ByteString -> Recipe (ByteString, ByteString)
+runTakeRead' step input = do
     sudo <- gets ctxSudo
     trace step
     case step of
@@ -268,11 +284,11 @@ runTakeRead step input = do
         Shell cmd      -> runTakeReadWith (P.shell $ buildShellCmd sudo cmd) input
         Failure _      -> error "Recipe.runTakeRead: unreachable case"
 
-runTakeReadWith :: CreateProcess -> Text -> Recipe (Text, Text)
+runTakeReadWith :: CreateProcess -> ByteString -> Recipe (ByteString, ByteString)
 runTakeReadWith p input = do
     dir <- gets ctxCwd
     env <- procEnv
-    (exit, out, err) <- liftIO $ PT.readCreateProcessWithExitCode p { cwd = dir, env = env } input
+    (exit, out, err) <- liftIO $ PB.readCreateProcessWithExitCode p { cwd = dir, env = env } input
     case exit of
         ExitFailure code -> do
             trc <- gets ctxTrace
@@ -306,17 +322,24 @@ runRecipeConf conf recipe = do
         Right _ | recipeConfVerbose conf -> hPutStrLn stderr "Cook: recipe successful"
                 | otherwise              -> return ()
 
-runPipe :: [Step] -> Recipe ()
-runPipe pipe = runPipeTakeRead pipe empty >>= liftIO . T.putStr
+runPipe :: NonEmpty Step -> Recipe ()
+runPipe pipe = runPipeRead pipe >>= liftIO . T.putStr
 
-runPipeRead :: [Step] -> Recipe Text
-runPipeRead pipe = runPipeTakeRead pipe empty
+runPipeRead :: NonEmpty Step -> Recipe Text
+runPipeRead pipe = runPipeTakeRead pipe T.empty
 
-runPipeTakeRead :: [Step] -> Text -> Recipe Text
-runPipeTakeRead []     input = return input
-runPipeTakeRead (s:ss) input = do
-    (out, _) <- runTakeRead s input
-    runPipeTakeRead ss out
+runPipeRead' :: NonEmpty Step -> Recipe ByteString
+runPipeRead' pipe = runPipeTakeRead' pipe empty
+
+runPipeTakeRead :: NonEmpty Step -> Text -> Recipe Text
+runPipeTakeRead pipe input = T.decodeUtf8 <$> (runPipeTakeRead' pipe $ T.encodeUtf8 input)
+
+runPipeTakeRead' :: NonEmpty Step -> ByteString -> Recipe ByteString
+runPipeTakeRead' pipe input = build (toList pipe) input
+  where build []     input' = return input'
+        build (s:ss) input' = do
+            (out, _) <- runTakeRead' s input'
+            build ss out
 
 printTrace :: Int -> Trace -> IO ()
 printTrace _ []                     = return ()
