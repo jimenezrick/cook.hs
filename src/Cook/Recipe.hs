@@ -46,6 +46,7 @@ module Cook.Recipe (
   , createFsTree
 
   , getEnv
+  , getCwd
   ) where
 
 import Control.Exception.Lifted
@@ -205,8 +206,8 @@ withSudoUser :: String -> Recipe a -> Recipe a
 withSudoUser user | null user = error "Recipe.withSudoUser: invalid user"
                   | otherwise = withCtx $ \ctx -> ctx { ctxSudo = ExecSudoUser user }
 
-absoluteCwd :: Recipe FilePath
-absoluteCwd = do
+getCwd :: Recipe FilePath
+getCwd = do
     d <- gets ctxCwd
     case d of
         Nothing  -> liftIO getCurrentDirectory
@@ -214,8 +215,8 @@ absoluteCwd = do
 
 trace :: Step -> Recipe ()
 trace step = do
-    acwd <- absoluteCwd
-    modify $ \ctx@Ctx {..} -> ctx { ctxTrace = (step, ctx { ctxCwd = Just acwd }):ctxTrace }
+    dir <- getCwd
+    modify $ \ctx@Ctx {..} -> ctx { ctxTrace = (step, ctx { ctxCwd = Just dir }):ctxTrace }
 
 buildProcProg :: ExecPrivileges -> FilePath -> [String] -> (FilePath, [String])
 buildProcProg ExecNormal          prog args = (prog, args)
