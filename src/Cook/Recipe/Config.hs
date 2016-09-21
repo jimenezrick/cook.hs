@@ -48,8 +48,10 @@ writeConfig typ conf = return . T.decodeUtf8 $ encode typ conf
         prettyYAML  = Y.setConfCompare A.compare Y.defConfig
 
 mergeConfig :: Value -> Value -> Value
-mergeConfig (Object replace) (Object obj) = Object $ H.union replace obj
-mergeConfig _           _                 = error "Recipe.Config.mergeConfig: expecting two objects to merge"
+mergeConfig (Object replace) (Object obj) = Object $ H.unionWith ignoreNull replace obj
+  where ignoreNull Null v2 = v2
+        ignoreNull v1   _  = v1
+mergeConfig _ _ = error "Recipe.Config.mergeConfig: expecting two objects to merge"
 
 insertConfigWithKey :: [Text] -> Value -> Value -> Value
 insertConfigWithKey keys v o@(Object _) = o & compose path .~ Just v

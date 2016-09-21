@@ -28,7 +28,7 @@ data CjdnsOpts = CjdnsOpts
     { privateKey          :: Text
     , publicKey           :: Text
     , ipv6                :: Text
-    , authorizedPasswords :: Array
+    , authorizedPasswords :: Maybe Array
     , udpInterface        :: Array
     } deriving (Show, Generic)
 

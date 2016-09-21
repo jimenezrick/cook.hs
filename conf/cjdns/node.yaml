@@ -2,9 +2,9 @@ privateKey: qux
 publicKey: bar
 ipv6: foo
 
-authorizedPasswords:
-  - user: default-login
-    password: xyz
+#authorizedPasswords:
+#  - user: friend
+#    password: secret
 
 udpInterface:
   - connectTo:
