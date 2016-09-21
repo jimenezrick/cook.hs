@@ -181,8 +181,8 @@ withCd dir = withCtx (chdir dir)
   where chdir to | isAbsolute to = \ctx -> ctx { ctxCwd = Just to }
                  | otherwise     = \ctx ->
                      case ctxCwd ctx of
-                         Nothing -> ctx { ctxCwd = Just to }
-                         Just d' -> ctx { ctxCwd = Just $ d' </> to }
+                         Nothing  -> ctx { ctxCwd = Just to }
+                         Just cur -> ctx { ctxCwd = Just $ cur </> to }
 
 withEnv :: [(String, String)] -> Recipe a -> Recipe a
 withEnv env = withCtx (\ctx -> ctx { ctxEnv = Just env })
@@ -201,9 +201,8 @@ absoluteCwd :: Recipe FilePath
 absoluteCwd = do
     d <- gets ctxCwd
     case d of
-        Nothing                   -> liftIO getCurrentDirectory
-        Just dir | isAbsolute dir -> return dir
-                 | otherwise      -> liftIO $ canonicalizePath dir
+        Nothing  -> liftIO getCurrentDirectory
+        Just dir -> liftIO $ canonicalizePath dir
 
 trace :: Step -> Recipe ()
 trace step = do

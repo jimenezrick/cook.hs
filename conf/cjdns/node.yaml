@@ -1,6 +1,6 @@
-ipv6: foo
-publicKey: bar
 privateKey: qux
+publicKey: bar
+ipv6: foo
 
 authorizedPasswords:
   - user: default-login

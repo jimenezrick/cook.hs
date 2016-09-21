@@ -3,10 +3,12 @@ module Cook.Catalog.Cjdns (
   , requireCjdns
   ) where
 
+import Control.Monad
+import Control.Monad.IO.Class
 import Data.Aeson
 import Data.Aeson.Lens
-import Data.ByteString (ByteString)
 import Data.Text (Text)
+import Data.Maybe
 import GHC.Generics
 import System.FilePath.Find
 
@@ -22,7 +24,6 @@ import Cook.Catalog.Systemd
 -- Create ad-hoc recipe to generate random passwords
 --
 
--- XXX: Validae this? not used any more
 data CjdnsOpts = CjdnsOpts
     { privateKey          :: Text
     , publicKey           :: Text
@@ -36,9 +37,9 @@ instance ToJSON CjdnsOpts
 instance FromJSON CjdnsOpts
 
 requireCjdns :: FilePath -> Recipe ()
-requireCjdns confPath = withRecipeName "Cjdns.RequireCjdns" $ do
-    conf <- loadConfig JSON confPath
-    setUpCjdns conf
+requireCjdns optsPath = withRecipeName "Cjdns.RequireCjdns" $ do
+    opts <- loadConfig YAML optsPath
+    setUpCjdns opts
 
 setUpCjdns :: CjdnsOpts -> Recipe ()
 setUpCjdns opts = withRecipeName "SetUpCjdns" $ do
@@ -49,37 +50,26 @@ setUpCjdns opts = withRecipeName "SetUpCjdns" $ do
      -startService "cjdns"
      -}
 
-    conf <- generateConfig
-    nodeConf <- loadConfig YAML "conf/cjdns/node.yaml"
+    defConf <- generateConfig
     peers <- getPeers
-
-    let conf'  = mergeConfig nodeConf conf
-        conf'' = insertConfigInto (key "interfaces" . key "UDPInterface" . nth 0 . key "connectTo") peers conf
-
-    conf''' <- writeConfig JSON conf''
-
-    createFsTree "/tmp" $ File "cjdroute.conf" (Content conf''') defAttrs
+    conf <- writeConfig JSON $
+            insertConfigInto (key "interfaces" . key "UDPInterface" . nth 0 . key "connectTo") peers $
+            mergeConfig (toJSON opts) defConf
+    createFsTree "/tmp" $ File "cjdroute.conf" (Content conf) defAttrs
 
 getPeers :: Recipe Value
 getPeers = withRecipeName "GetPeers" $ do
-    peers <- withTempDir $ do
-        runSh "curl -s -L https://github.com/hyperboria/peers/archive/master.tar.gz | tar xz"
-        peerFiles <- liftIO $ find always (extension ==? ".k") "peers-master"
+    withTempDir $ do
+        runSh "curl -s -L https://github.com/hyperboria/peers/archive/master.tar.gz | tar xz --strip-components=1"
+        peerFiles <- liftIO $ find always (extension ==? ".k") "."
 
-        liftIO $ putStrLn "Loading peers:"
+        liftIO $ putStrLn "Loading public peers:"
         liftIO $ forM_ peerFiles putStrLn
 
         peersList <- catMaybes <$> mapM (loadConfig JSON) peerFiles
-        writeConfig JSON $ foldl1 mergeConfig peersList
-
-    liftIO $ print peers
-
-    {-createFsTree "." $ File "peers.json" conf defAttrs-}
-    -- inject config
-
-
+        return $ foldl1 mergeConfig peersList
 
 generateConfig :: Recipe Value
-generateConfig = do
+generateConfig = withRecipeName "GenerateConfig" $ do
     conf <- runPipeRead [proc "cjdroute" ["--genconf"], proc "cjdroute" ["--cleanconf"]]
-    return $ readConfig conf
+    readConfig JSON conf

@@ -13,8 +13,8 @@ import Cook.Catalog.Cjdns
 main :: IO ()
 main = testCjdns
 
-main' :: IO ()
-main' = do
+testRun :: IO ()
+testRun = do
     runRecipe $ withRecipeName "main" $ do
         {-
          -withSudo $ runProc' "id"
@@ -55,7 +55,7 @@ testContainer = do
 testCjdns :: IO ()
 testCjdns = do
     runRecipe $ do
-        requireCjdns "cjdroute.conf.yaml"
+        requireCjdns "conf/cjdns/node.yaml"
 
 testEnv :: IO ()
 testEnv = do
