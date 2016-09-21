@@ -29,6 +29,7 @@ library
                      , Cook.Recipe.Config
                      , Cook.Recipe.FsTree
                      , Cook.Recipe.Template
+                     , Cook.Recipe.Util
                      , Cook.Catalog.Cjdns
                      , Cook.Catalog.Git
                      , Cook.Catalog.IPFS
@@ -47,6 +48,7 @@ library
                      , semigroups
                      , lifted-base
                      , filepath
+                     , filemanip
                      , text
                      , transformers
                      , mtl
