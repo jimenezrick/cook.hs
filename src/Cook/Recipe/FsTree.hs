@@ -7,17 +7,17 @@ module Cook.Recipe.FsTree (
   ) where
 
 import Data.Aeson
-import Data.ByteString (ByteString)
+import Data.ByteString.Lazy (ByteString)
 import Data.Default
 import Data.Foldable
-import Data.Text (Text)
+import Data.Text.Lazy (Text)
 import System.Directory
 import System.FilePath
 import System.Posix.Files
 import System.Posix.Types
 import System.Posix.User
 
-import qualified Data.Text.IO as Text
+import qualified Data.Text.Lazy.IO as T
 
 import Cook.Recipe.Template
 
@@ -42,7 +42,7 @@ createFsTree base fstree = do
     applyAttrs base fstree
 
 createFile :: FilePath -> FsTree -> IO ()
-createFile base (File name (Content txt) _)                  = Text.writeFile (base </> name) txt
+createFile base (File name (Content txt) _)                  = T.writeFile (base </> name) txt
 createFile base (File name (Copy src) _)                     = copyFile src (base </> name)
 createFile base (File name (Template tname tmpl conf) attrs) = do
     result <- useTemplateWith tname tmpl conf

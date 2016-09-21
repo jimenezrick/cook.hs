@@ -3,14 +3,14 @@ module Cook.Recipe.Template (
   ) where
 
 import Data.Aeson
-import Data.ByteString
-import Data.Text
-import Data.Text.Encoding
+import Data.ByteString.Lazy (ByteString)
+import Data.Text.Lazy
+import Data.Text.Lazy.Encoding
 import Text.Mustache
 import Text.Mustache.Types
 
 useTemplateWith :: ToJSON a => String -> ByteString -> a -> IO Text
 useTemplateWith name tmpl conf = do
-    case compileTemplate name (decodeUtf8 tmpl) of
+    case compileTemplate name (toStrict $ decodeUtf8 tmpl) of
         Left err    -> fail $ show err
-        Right ttmpl -> return $ substitute ttmpl $ mFromJSON conf
+        Right ttmpl -> return . fromStrict . substitute ttmpl $ mFromJSON conf
