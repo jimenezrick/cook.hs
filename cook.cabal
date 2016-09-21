@@ -55,6 +55,7 @@ library
                      , mmorph
                      , unix
                      , network
+                     , http-conduit
                      , directory
                      , process
                      , process-extras
