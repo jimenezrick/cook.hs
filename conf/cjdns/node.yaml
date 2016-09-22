@@ -7,7 +7,7 @@ ipv6: foo
 #    password: secret
 
 udpInterface:
-  - connectTo:
+  - connectTo: {}
     bind: "0.0.0.0:22378"
-  - connectTo:
+  - connectTo: {}
     bind: "[::]:22378"
