@@ -9,11 +9,11 @@ import Network.HTTP.Simple
 
 import Cook.Recipe
 
-withTempDir :: Recipe a -> Recipe a
+withTempDir :: (FilePath -> Recipe a) -> Recipe a
 withTempDir recipe = withRecipeName "WithTempDir" $ do
     (tmpDir, _) <- runRead $ proc "mktemp" ["--tmpdir", "--directory", "cook-XXXXXX"]
     let tmpDir' = head . lines $ unpack tmpDir
-    a <- withCd tmpDir' recipe
+    a <- withCd tmpDir' $ recipe tmpDir'
     runProc "rm" ["-rf", tmpDir']
     return a
 
