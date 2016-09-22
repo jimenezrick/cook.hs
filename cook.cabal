@@ -32,6 +32,7 @@ library
                      , Cook.Recipe.Util
                      , Cook.Catalog.Cjdns
                      , Cook.Catalog.Git
+                     , Cook.Catalog.Go
                      , Cook.Catalog.IPFS
                      , Cook.Catalog.SSH
                      , Cook.Catalog.Sudo
