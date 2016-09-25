@@ -6,8 +6,13 @@ ipv6: foo
 #  - user: friend
 #    password: secret
 
-udpInterface:
-  - connectTo: {}
-    bind: "0.0.0.0:22378"
-  - connectTo: {}
-    bind: "[::]:22378"
+interfaces:
+  ETHInterface:
+    - beacon: 2
+      bind: all
+      connectTo: {}
+  UDPInterface:
+    - connectTo: {}
+      bind: "0.0.0.0:22378"
+    - connectTo: {}
+      bind: "[::]:22378"

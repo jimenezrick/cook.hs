@@ -19,9 +19,7 @@ import Cook.Catalog.Arch.Pacman
 import Cook.Catalog.Systemd
 
 --
--- TODO: create passwords, nftables
---
--- Create ad-hoc recipe to generate random passwords
+-- TODO: nftables
 --
 
 data CjdnsOpts = CjdnsOpts
@@ -29,7 +27,7 @@ data CjdnsOpts = CjdnsOpts
     , publicKey           :: Text
     , ipv6                :: Text
     , authorizedPasswords :: Maybe Array
-    , udpInterface        :: Array
+    , interfaces          :: Object
     } deriving (Show, Generic)
 
 instance ToJSON CjdnsOpts
@@ -56,11 +54,10 @@ setUpCjdns opts = withRecipeName "SetUpCjdns" $ do
 
 getPeers :: Recipe Value
 getPeers = withRecipeName "GetPeers" $ do
-    withTempDir $ do
+    withTempDir $ \tmpDir -> do
         tarball <- getHTTP "https://github.com/hyperboria/peers/archive/master.tar.gz"
         void $ runTakeRead' (proc "tar" ["xz", "--strip-components=1"]) tarball
-        cwd <- getCwd
-        peerFiles <- liftIO $ find always (extension ==? ".k") cwd
+        peerFiles <- liftIO $ find always (extension ==? ".k") tmpDir
 
         liftIO $ putStrLn "Loading public peers:"
         liftIO $ forM_ peerFiles putStrLn
