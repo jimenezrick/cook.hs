@@ -28,6 +28,7 @@ data CjdnsOpts = CjdnsOpts
     , ipv6                :: Text
     , authorizedPasswords :: Maybe Array
     , interfaces          :: Object
+    , logging             :: Maybe Object
     } deriving (Show, Generic)
 
 instance ToJSON CjdnsOpts

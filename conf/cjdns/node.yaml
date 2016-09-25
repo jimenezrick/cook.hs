@@ -16,3 +16,6 @@ interfaces:
       bind: "0.0.0.0:22378"
     - connectTo: {}
       bind: "[::]:22378"
+
+logging:
+#  logTo: stdout
