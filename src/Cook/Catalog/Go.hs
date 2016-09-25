@@ -6,6 +6,7 @@ import System.FilePath ((</>))
 
 import Cook.Recipe
 import Cook.Recipe.Util
+import Cook.Catalog.Arch.Pacman
 
 goGet :: String -> Recipe ()
 goGet repo = withRecipeName "Go.goGet" $ do
