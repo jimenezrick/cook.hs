@@ -76,10 +76,10 @@ executable cook
   build-depends:       base >=4.8 && <5
                      , cook
 
-executable test-recipe
+executable playground
   ghc-options:         -Wall
   default-language:    Haskell2010
-  main-is:             test/TestRecipe.hs
+  main-is:             test/Playground.hs
   build-depends:       base >=4.8 && <5
                      , transformers
                      , text
