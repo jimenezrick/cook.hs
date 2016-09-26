@@ -9,7 +9,7 @@ import Cook.Recipe.Util
 import Cook.Catalog.Arch.Pacman
 
 goGet :: String -> Recipe ()
-goGet repo = withRecipeName "Go.goGet" $ do
+goGet repo = withRecipeName "Go.Get" $ do
     requirePackages ["go"]
     withTempDir $ \tmpDir -> do
         withEnv [("GOPATH", tmpDir)] $ do

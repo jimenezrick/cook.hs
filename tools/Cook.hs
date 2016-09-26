@@ -4,15 +4,20 @@ import System.Environment
 import Text.Printf
 
 import Cook.Recipe
+import Cook.Recipe.Bootstrap
 import Cook.Catalog.Arch.Rootfs
 import Cook.Catalog.Systemd.Container
+import Cook.Catalog.Cjdns
 
 main :: IO ()
 main = runRecipe $ do
     args <- liftIO $ getArgs
     case args of
-        [container] -> do
-            void $ buildRootfs container
-            tarball <- compressRootfs container
+        ["container", name] -> do
+            void $ buildRootfs name
+            tarball <- compressRootfs name
             liftIO $ printf "Container created: %s\n" tarball
-        _ -> error "Invalid args"
+        ["cjdns", nodeConf] -> do
+            bootstrapCook
+            requireCjdns nodeConf
+        _ -> error "Invalid arguments"

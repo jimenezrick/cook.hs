@@ -26,6 +26,7 @@ library
                      , GADTs
   hs-source-dirs:      src
   exposed-modules:     Cook.Recipe
+                     , Cook.Recipe.Bootstrap
                      , Cook.Recipe.Config
                      , Cook.Recipe.FsTree
                      , Cook.Recipe.Template
@@ -70,10 +71,10 @@ library
                      , lens
                      , lens-aeson
 
-executable cook-container
+executable cook
   ghc-options:         -Wall
   default-language:    Haskell2010
-  main-is:             tools/CookContainer.hs
+  main-is:             tools/Cook.hs
   build-depends:       base >=4.8 && <5
                      , cook
 

@@ -1,8 +1,8 @@
 module Cook.Catalog.Git (
-    clone
+    gitClone
   ) where
 
 import Cook.Recipe
 
-clone :: String -> Recipe ()
-clone repo = withRecipeName "Git.Clone" $ runProc "git" ["clone", repo]
+gitClone :: String -> Recipe ()
+gitClone repo = withRecipeName "Git.Clone" $ runProc "git" ["clone", repo]
