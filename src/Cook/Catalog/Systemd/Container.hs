@@ -1,6 +1,8 @@
 module Cook.Catalog.Systemd.Container (
     tarRootfs
-  , createCookDir
+  , createEmbeddedCookDir
+  , embedCabalProgs
+  , embedFsTree
   ) where
 
 import System.FilePath
@@ -16,14 +18,17 @@ tarRootfs path = withRecipeName "Systemd.Container.TarRootfs" $ do
 
 createEmbeddedCookDir :: FilePath -> Recipe ()
 createEmbeddedCookDir containerPath = withRecipeName "Systemd.Container.CreateEmbeddedCookDir" $ do
-    withCd containerPath $ do
-        createFsTree "/" $ DirEmpty "cook/bin" (Just 0o700, Just ("root", "root"))
+    createFsTree containerPath $
+        Dir "cook" (Just 0o755, Just ("root", "root"))
+            [ DirEmpty "bin" (Just 0o755, Just ("root", "root"))
+            , DirEmpty "conf" (Just 0o755, Just ("root", "root"))
+            ]
 
-embedCabalBin :: FilePath -> String -> Recipe ()
-embedCookBin containerPath prog = withRecipeName "Systemd.Container.EmbedCabalBin" $ do
-    runProc "cabal" ["install", "--bindir=" ++ bindir, prog]
+embedCabalProgs :: FilePath -> Recipe ()
+embedCabalProgs containerPath = withRecipeName "Systemd.Container.EmbedCabalProgs" $ do
+    runProc "cabal" ["install", "--bindir=" ++ bindir]
   where bindir = containerPath </> "cook/bin"
 
-embedInCookDir :: FilePath -> FsTree -> Recipe ()
-embedInCookDir containerPath fstree = withRecipeName "Systemd.Container.EmbedInCookDir" $ do
-    createFsTree containerPath fstree
+embedFsTree :: FilePath -> FsTree -> Recipe ()
+embedFsTree containerPath fstree = withRecipeName "Systemd.Container.EmbedFsTree" $ do
+    createFsTree (containerPath </> "cook") fstree
