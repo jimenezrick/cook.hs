@@ -37,6 +37,7 @@ library
                      , Cook.Catalog.SSH
                      , Cook.Catalog.Sudo
                      , Cook.Catalog.Arch.Pacman
+                     , Cook.Catalog.Arch.Rootfs
                      , Cook.Catalog.Debian.Apt
                      , Cook.Catalog.Systemd
                      , Cook.Catalog.Systemd.Container
