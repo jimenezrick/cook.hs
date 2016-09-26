@@ -13,8 +13,8 @@ main :: IO ()
 main = runRecipe $ do
     args <- liftIO $ getArgs
     case args of
-        ["container", name] -> do
-            void $ buildRootfs name
+        "container":name:extraPkgs -> do
+            void $ buildRootfs name extraPkgs
             tarball <- tarRootfs name
             liftIO $ printf "Container created: %s\n" tarball
         ["cjdns", nodeConf] -> do

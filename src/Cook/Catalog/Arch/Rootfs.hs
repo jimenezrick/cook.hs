@@ -11,10 +11,10 @@ import qualified Data.Text as T
 import Cook.Recipe
 import Cook.Recipe.Util
 
-buildRootfs :: FilePath -> Recipe FilePath
-buildRootfs path = withRecipeName "Arch.Rootfs.BuildRootfs" $ do
+buildRootfs :: FilePath -> [String] -> Recipe FilePath
+buildRootfs path extraPkgs = withRecipeName "Arch.Rootfs.BuildRootfs" $ do
     liftIO $ createDirectory path
-    runProc "pacstrap" ["-i", "-c", "-d", path, "--noconfirm", "base"]
+    runProc "pacstrap" $ ["-i", "-c", "-d", path, "--noconfirm", "base"] ++ extraPkgs ++ ["--ignore", "linux"]
     enablePts0 $ path </> "etc/securetty"
     return path
 
