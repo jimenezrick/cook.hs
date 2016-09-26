@@ -1,3 +1,0 @@
-- Create a test recipe to create a container
-- Send as a delt snapshot of base with btrfs send
-- Create a deployer for coreos
