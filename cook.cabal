@@ -70,10 +70,10 @@ library
                      , lens
                      , lens-aeson
 
-executable cook
+executable cook-container
   ghc-options:         -Wall
   default-language:    Haskell2010
-  main-is:             Main.hs
+  main-is:             tools/CookContainer.hs
   build-depends:       base >=4.8 && <5
                      , cook
 
