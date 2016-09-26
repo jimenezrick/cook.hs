@@ -12,10 +12,7 @@ main = runRecipe $ do
     args <- liftIO $ getArgs
     case args of
         [container] -> do
-            liftIO $ printf "Building Arch rootfs...\n"
             void $ buildRootfs container
-
-            liftIO $ printf "Compressing container...\n"
             tarball <- compressRootfs container
-            liftIO $ printf "Done: %s\n" tarball
+            liftIO $ printf "Container created: %s\n" tarball
         _ -> error "Invalid args"

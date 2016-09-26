@@ -11,6 +11,5 @@ buildRootfs :: FilePath -> Recipe FilePath
 buildRootfs path = withRecipeName "Arch.Rootfs.BuildRootfs" $ do
     liftIO $ createDirectory path
     withSudo $ do
-        -- XXX --noconfirm
-        runProc "pacstrap" ["-i", "-c", "-d", path, "--needed", "base", "--ignore", "linux"]
+        runProc "pacstrap" ["-i", "-c", "-d", path, "--noconfirm", "base"]
     return path

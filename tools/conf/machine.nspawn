@@ -1,0 +1,8 @@
+# Place in /etc/systemd/nspawn/<machine>.nspawn
+# See: man 5 systemd.nspawn
+
+[Exec]
+Boot=yes
+
+[Network]
+Private=no
