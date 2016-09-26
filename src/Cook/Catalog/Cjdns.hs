@@ -57,6 +57,8 @@ setUpCjdns opts = withRecipeName "SetUpCjdns" $ do
     createFsTree "/etc" $ File "cjdroute.conf" (Content conf) (Just 0o600, Just ("root", "root"))
     enableService "cjdns"
     startService "cjdns"
+
+    -- To test conf generation:
     --createFsTree "." $ File "cjdroute.conf" (Content conf) defAttrs
 
 getPeers :: Recipe (Value, Value)
