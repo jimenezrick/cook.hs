@@ -1,3 +1,4 @@
 # F*ck shell script!
 
-Simple/effective configuration management + deployment done in Haskell
+Simple/effective configuration management + containerization done in Haskell.
+Use an expressive DSL and do all the heavy lifting with systemd.
