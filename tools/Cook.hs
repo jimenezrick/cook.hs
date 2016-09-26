@@ -15,9 +15,11 @@ main = runRecipe $ do
     case args of
         ["container", name] -> do
             void $ buildRootfs name
-            tarball <- compressRootfs name
+            tarball <- tarRootfs name
             liftIO $ printf "Container created: %s\n" tarball
         ["cjdns", nodeConf] -> do
             bootstrapCook
             requireCjdns nodeConf
         _ -> error "Invalid arguments"
+
+-- XXX: Copy everything to /cook/ ?
