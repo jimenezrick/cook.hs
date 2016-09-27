@@ -11,7 +11,7 @@ main = runRecipe $ do
     case args of
         ["prepare-container", name, cjdnsToolPath, nodeConfPath] -> do
             embedFsTree name $
-                File "bin/cjdns" (Copy cjdnsToolPath) defAttrs
+                File "bin/cook-cjdns" (Copy cjdnsToolPath) defAttrs
             embedFsTree name $ Dir "conf/cjdns" defAttrs
                 [File "node.yaml" (Copy nodeConfPath) (Just 0o600, Just ("root", "root"))]
         _ -> requireCjdns "/cook/conf/cjdns/node.yaml"
