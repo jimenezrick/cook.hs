@@ -9,8 +9,8 @@ main :: IO ()
 main = runRecipe $ do
     args <- liftIO $ getArgs
     case args of
-        ["embed-container", name] -> do
+        ["prepare-container", name, nodeConfPath] -> do
             embedCabalProgs name
             embedFsTree name $ Dir "conf/cjdns" defAttrs
-                [File "node.yaml" (Copy "conf/cjdns/node.yaml") (Just 0o600, Just ("root", "root"))]
+                [File "node.yaml" (Copy nodeConfPath) (Just 0o600, Just ("root", "root"))]
         _ -> requireCjdns "/cook/conf/cjdns/node.yaml"
