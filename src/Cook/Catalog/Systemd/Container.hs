@@ -1,7 +1,6 @@
 module Cook.Catalog.Systemd.Container (
     tarRootfs
   , createEmbeddedCookDir
-  , embedCabalProgs
   , embedFsTree
   ) where
 
@@ -23,11 +22,6 @@ createEmbeddedCookDir containerPath = withRecipeName "Systemd.Container.CreateEm
             [ DirEmpty "bin" (Just 0o755, Just ("root", "root"))
             , DirEmpty "conf" (Just 0o755, Just ("root", "root"))
             ]
-
-embedCabalProgs :: FilePath -> Recipe ()
-embedCabalProgs containerPath = withRecipeName "Systemd.Container.EmbedCabalProgs" $ do
-    runProc "cabal" ["install", "--bindir=" ++ bindir]
-  where bindir = containerPath </> "cook/bin"
 
 embedFsTree :: FilePath -> FsTree -> Recipe ()
 embedFsTree containerPath fstree = withRecipeName "Systemd.Container.EmbedFsTree" $ do

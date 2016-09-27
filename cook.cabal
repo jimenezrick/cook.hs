@@ -71,21 +71,21 @@ library
                      , lens
                      , lens-aeson
 
-executable contain
+executable cook-contain
   ghc-options:         -Wall
   default-language:    Haskell2010
   main-is:             tools/Contain.hs
   build-depends:       base >=4.8 && <5
                      , cook
 
-executable cjdns
+executable cook-cjdns
   ghc-options:         -Wall
   default-language:    Haskell2010
   main-is:             tools/Cjdns.hs
   build-depends:       base >=4.8 && <5
                      , cook
 
-executable playground
+executable cook-playground
   ghc-options:         -Wall
   default-language:    Haskell2010
   main-is:             test/Playground.hs
