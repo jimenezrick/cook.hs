@@ -14,4 +14,6 @@ main = runRecipe $ do
                 File "bin/cook-cjdns" (Copy cjdnsToolPath) defAttrs
             embedFsTree name $ Dir "conf/cjdns" defAttrs
                 [File "node.yaml" (Copy nodeConfPath) (Just 0o600, Just ("root", "root"))]
-        _ -> requireCjdns "/cook/conf/cjdns/node.yaml"
+        _ -> do
+            requireCjdns "/cook/conf/cjdns/node.yaml"
+            requireCjdcmd

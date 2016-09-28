@@ -1,6 +1,7 @@
 module Cook.Catalog.Cjdns (
     CjdnsOpts (..)
   , requireCjdns
+  , requireCjdcmd
   ) where
 
 import Control.Monad
@@ -8,7 +9,10 @@ import Control.Monad.IO.Class
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Aeson.Lens
+import Data.ByteString.Lazy (fromStrict)
+import Data.FileEmbed (embedFile)
 import Data.Text.Lazy (Text)
+import Data.Text.Lazy.Encoding (decodeUtf8)
 import Data.Maybe
 import GHC.Generics
 import System.FilePath.Find
@@ -20,6 +24,7 @@ import Cook.Recipe
 import Cook.Recipe.Config
 import Cook.Recipe.Util
 import Cook.Catalog.Arch.Pacman
+import Cook.Catalog.Go
 import Cook.Catalog.Systemd
 
 --
@@ -81,3 +86,11 @@ generateConfig :: Recipe Value
 generateConfig = withRecipeName "GenerateConfig" $ do
     conf <- runPipeRead [proc "cjdroute" ["--genconf"], proc "cjdroute" ["--cleanconf"]]
     readConfig JSON conf
+
+requireCjdcmd :: Recipe ()
+requireCjdcmd = withRecipeName "Cjdns.RequireCjdcmd" $ do
+    goGet "github.com/fc00/cjdcmd-ng"
+    createFsTree "/root" $ File ".cjdnsadmin" (Content cjdcmdConf) defAttrs
+
+cjdcmdConf :: Text
+cjdcmdConf = decodeUtf8 $ fromStrict $(embedFile "conf/cjdns/cjdnsadmin")
