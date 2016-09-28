@@ -26,7 +26,6 @@ library
                      , GADTs
   hs-source-dirs:      src
   exposed-modules:     Cook.Recipe
-                     , Cook.Recipe.Bootstrap
                      , Cook.Recipe.Config
                      , Cook.Recipe.FsTree
                      , Cook.Recipe.Template
