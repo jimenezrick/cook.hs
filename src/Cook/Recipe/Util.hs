@@ -15,7 +15,7 @@ import qualified Data.Text.IO as T
 import Cook.Recipe
 
 withTempDir :: (FilePath -> Recipe a) -> Recipe a
-withTempDir recipe = withRecipeName "WithTempDir" $ catchException $ do
+withTempDir recipe = withRecipeName "Util.WithTempDir" $ catchException $ do
     (tmpDir, _) <- runRead $ proc "mktemp" ["--tmpdir", "--directory", "cook-XXXXXX"]
     let tmpDir' = head . lines $ unpack tmpDir
     a <- withCd tmpDir' $ recipe tmpDir'
@@ -23,12 +23,12 @@ withTempDir recipe = withRecipeName "WithTempDir" $ catchException $ do
     return a
 
 getHTTP :: String -> Recipe ByteString
-getHTTP url = withRecipeName "GetHTTP" $ catchException $ do
+getHTTP url = withRecipeName "Util.GetHTTP" $ catchException $ do
     req <- parseRequest url
     res <- httpLBS req
     return $ getResponseBody res
 
 withFileContent :: FilePath -> (Text -> Text) -> Recipe ()
-withFileContent path f = withRecipeName "WithFileContent" $ catchException $ do
+withFileContent path f = withRecipeName "Util.WithFileContent" $ catchException $ do
     content <- liftIO $ T.readFile path
     liftIO . T.writeFile path $ f content

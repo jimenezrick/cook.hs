@@ -51,15 +51,15 @@ mergeConfig :: Value -> Value -> Value
 mergeConfig (Object replace) (Object obj) = Object $ H.unionWith ignoreNull replace obj
   where ignoreNull Null v2 = v2
         ignoreNull v1   _  = v1
-mergeConfig _ _ = error "Recipe.Config.mergeConfig: expecting two objects to merge"
+mergeConfig _ _ = error "Config.mergeConfig: expecting two objects to merge"
 
 insertConfigWithKey :: [Text] -> Value -> Value -> Value
 insertConfigWithKey keys v o@(Object _) = o & compose path .~ Just v
   where access k = _Object . at (T.toStrict k)
         compose  = foldr1 (\f g -> f . _Just . g)
         path     = map access keys
-insertConfigWithKey _ _ _ = error "Recipe.Config.insertConfigWithKey: expecting an object to insert a value"
+insertConfigWithKey _ _ _ = error "Config.insertConfigWithKey: expecting an object to insert a value"
 
 insertConfigInto :: Traversal' Value Value -> Value -> Value -> Value
 insertConfigInto place v o@(Object _) = o & place .~ v
-insertConfigInto _ _ _ = error "Recipe.Config.insertConfigInto: expecting an object to insert a value"
+insertConfigInto _ _ _ = error "Config.insertConfigInto: expecting an object to insert a value"

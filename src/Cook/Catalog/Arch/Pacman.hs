@@ -22,8 +22,8 @@ installPackages pkgs = withRecipeName "Arch.Pacman.InstallPackages" $ do
     run $ pacman $ ["--needed", "-S"] <> pkgs
 
 isPackageInstalled :: String -> Recipe Bool
-isPackageInstalled ""  = error "isPackageInstalled: empty package name"
-isPackageInstalled pkg = withRecipeName "Arch.Pacman.IsPackageInstalled" $ do
+isPackageInstalled ""  = error "Pacman.isPackageInstalled: empty package name"
+isPackageInstalled pkg = withRecipeName "IsPackageInstalled" $ do
     err <- withoutError $ runRead $ pacman ["-Q", pkg]
     either (const $ return False) (const $ return True) err
 
