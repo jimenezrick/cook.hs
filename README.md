@@ -1,4 +1,4 @@
-# F*ck shell script!
+# Forget shell script!
 
 Simple/effective configuration management + containerization:
 
