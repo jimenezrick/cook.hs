@@ -24,9 +24,6 @@ import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
---
--- TODO: Add support for custom facts in SSH execution mode
---
 data Distro = Arch | Debian | Ubuntu | CentOS deriving Show
 
 lookupDistro :: Text -> Maybe Distro

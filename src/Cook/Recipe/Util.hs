@@ -3,9 +3,11 @@ module Cook.Recipe.Util (
   , getHTTP
   , withFileContent
   , mapFileContent
+  , execCwd
   ) where
 
-import Data.ByteString.Lazy (ByteString)
+import Data.ByteString.Lazy (ByteString ,fromStrict)
+import Data.FileEmbed
 import Data.Text (Text)
 import Data.Text.Lazy (unpack)
 import Network.HTTP.Simple
@@ -36,3 +38,8 @@ mapFileContent :: FilePath -> (Text -> Text) -> Recipe f ()
 mapFileContent path f = withRecipeName "Util.MapFileContent" $ do
     content <- recipeIO $ T.readFile path
     recipeIO . T.writeFile path $ f content
+
+execCwd :: Step -> Recipe f ()
+execCwd (Proc prog args) = withRecipeName "Util.ExecCwd" $
+    runInB (fromStrict execcwd) $ proc "sh" $ ["-s", prog] ++ args
+  where execcwd = $(embedFile "execcwd.sh")

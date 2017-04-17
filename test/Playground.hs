@@ -1,21 +1,11 @@
 import Cook.Facts
 import Cook.Recipe
 import Cook.Recipe.Util
-import Cook.Catalog.Cjdns
 
 main :: IO ()
 main = do
-    {-testSsh-}
-    testError
-
-testCjdns :: IO ()
-testCjdns = runRecipe $
-    requireCjdns "conf/cjdns/node.yaml"
-
-testSsh :: IO ()
-testSsh = runRecipe $
-    withSshUser "root" "51.15.58.63" $
-        runProc0 "uptime"
+    testSsh
+    {-testError-}
 
 testError :: IO ()
 testError = runRecipe $ do
@@ -27,3 +17,16 @@ testError = runRecipe $ do
         withRecipeName "foo.bar.here" $
             withRecipeName "foo.bar.yyy.there" $
                 failWith "WTF"
+
+testSsh :: IO ()
+testSsh = runRecipe $
+    withSsh "alarm" "192.168.1.155" $ do
+        runProc0 "uname -a"
+        runProc0 "date"
+        runProc0 "uptime"
+        withCd "/" $ do
+            runProc "echo" ["begin"]
+            execCwd $ proc0 "ls"
+            runProc0 "ls"
+            runSh "ls /foo"
+            runProc "echo" ["end"]

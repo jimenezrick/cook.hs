@@ -1,7 +1,7 @@
 module Cook.Recipe (
     Recipe
   , RecipeConf (..)
-  , Step
+  , Step (..)
 
   , proc
   , proc0
@@ -29,7 +29,6 @@ module Cook.Recipe (
   , withCd
   , withEnv
   , withSsh
-  , withSshUser
   , withoutError
   , withoutErrorWhen
   , withSudo
@@ -58,7 +57,7 @@ module Cook.Recipe (
   ) where
 
 import Control.Arrow
-import Control.Exception.Safe (MonadThrow, MonadCatch, SyncExceptionWrapper, handle)
+import Control.Exception.Safe (MonadThrow, MonadCatch, SomeException, handle)
 import Control.Monad.Except
 import Control.Monad.Morph
 import Control.Monad.State
@@ -100,13 +99,13 @@ data RecipeConf f where
 
 deriving instance Show (RecipeConf f)
 
-data ExecTarget = ExecLocal
-                | ExecSsh (Maybe String) String
-                deriving Show
+data ExecMode = ExecLocal
+              | ExecSsh String String
+              deriving Show
 
-data ExecPrivileges = ExecNormal
-                    | ExecSudo (Maybe String)
-                    deriving Show
+data ExecPriv = ExecNormal
+              | ExecSudo (Maybe String)
+              deriving Show
 
 type TraceStep f = (Result, Ctx f)
 
@@ -115,9 +114,9 @@ data Ctx f where
         { ctxRecipeNames :: [String]
         , ctxCwd         :: Maybe FilePath
         , ctxEnv         :: Maybe [(String, String)]
-        , ctxTarget      :: ExecTarget
+        , ctxMode        :: ExecMode
         , ctxTrace       :: [TraceStep f]
-        , ctxSudo        :: ExecPrivileges
+        , ctxPriv        :: ExecPriv
         , ctxRecipeConf  :: RecipeConf f
         } -> Ctx f
 
@@ -193,7 +192,7 @@ abortRecipe :: Recipe f a
 abortRecipe = gets ctxTrace >>= throwError . NE.fromList
 
 catchException :: Recipe f a -> Recipe f a
-catchException = handle (\e -> failWith $ show (e :: SyncExceptionWrapper))
+catchException = handle (\e -> failWith $ show (e :: SomeException))
 
 withCtx :: (Ctx f -> Ctx f) -> Recipe f a -> Recipe f a
 withCtx f recipe = do
@@ -241,15 +240,6 @@ withCd dir = withCtx (chdir dir)
 withEnv :: [(String, String)] -> Recipe f a -> Recipe f a
 withEnv env = withCtx (\ctx -> ctx { ctxEnv = Just env })
 
-withSsh :: String -> Recipe f a -> Recipe f a
-withSsh = withSsh' Nothing
-
-withSsh' :: Maybe String -> String -> Recipe f a -> Recipe f a
-withSsh' user host = withCtx (\ctx -> ctx { ctxTarget = ExecSsh user host })
-
-withSshUser :: String -> String -> Recipe f a -> Recipe f a
-withSshUser user = withSsh' (Just user)
-
 withoutError :: Recipe f a -> Recipe f (Either Result a)
 withoutError recipe = (Right <$> recipe) `catchError` \trace -> return . Left . fst $ NE.head trace
 
@@ -265,51 +255,54 @@ withoutErrorWhen isCode recipe = do
         Right v                   -> return v
 
 withSudo :: Recipe f a -> Recipe f a
-withSudo = withCtx $ \ctx -> ctx { ctxSudo = ExecSudo Nothing }
+withSudo = withCtx $ \ctx -> ctx { ctxPriv = ExecSudo Nothing }
 
 withSudoUser :: String -> Recipe f a -> Recipe f a
 withSudoUser user | null user = error "Recipe.withSudoUser: empty user"
-                  | otherwise = withCtx $ \ctx -> ctx { ctxSudo = ExecSudo (Just user) }
+                  | otherwise = withCtx $ \ctx -> ctx { ctxPriv = ExecSudo (Just user) }
 
 getFacts :: Recipe f (F.Facts f)
 getFacts = gets $ recipeConfFacts . ctxRecipeConf
 
+withSsh :: String -> String -> Recipe f a -> Recipe f a
+withSsh user host recipe = withCtx (\ctx -> ctx { ctxMode = ExecSsh user host }) recipe
+
 getCwd :: Recipe f FilePath
 getCwd = do
-    d <- gets ctxCwd
-    case d of
+    dir <- gets ctxCwd
+    case dir of
         Nothing  -> recipeIO getCurrentDirectory
-        Just dir -> recipeIO $ canonicalizePath dir
+        Just d -> recipeIO $ canonicalizePath d
 
 traceResult :: Result -> Recipe f ()
 traceResult result = do
     dir <- getCwd
     modify $ \ctx@Ctx {..} -> ctx { ctxTrace = (result, ctx { ctxCwd = Just dir }):ctxTrace }
 
-buildProCfg :: ExecTarget -> ExecPrivileges -> Step -> P.ProcessConfig () () ()
-buildProCfg ExecLocal           priv (Proc prog args) = uncurry P.proc $ buildProcProg priv prog args
-buildProCfg ExecLocal           priv (Shell cmd)      = P.shell $ buildShellCmd priv cmd
-buildProCfg (ExecSsh user host) priv (Shell cmd)      = uncurry P.proc $ buildSshCmd user host [buildShellCmd priv cmd]
-buildProCfg (ExecSsh user host) priv (Proc prog args) = uncurry P.proc $ buildSshCmd user host (prog':args')
-  where (prog', args') = buildProcProg priv prog args
+buildProCfg :: ExecMode -> ExecPriv -> Step -> P.ProcessConfig () () ()
+buildProCfg ExecLocal priv (Proc prog args) = uncurry P.proc $ buildProcProg priv prog args
+buildProCfg ExecLocal priv (Shell cmd)      = P.shell $ buildShellCmd priv cmd
+buildProCfg (ExecSsh user host) priv step   = buildSshCmd user host priv step
 
-buildProcProg :: ExecPrivileges -> FilePath -> [String] -> (FilePath, [String])
+buildSshCmd :: String -> String -> ExecPriv -> Step -> P.ProcessConfig () () ()
+buildSshCmd user host priv (Proc prog args) = P.proc "ssh" $ [user ++ "@" ++ host, prog'] ++ args'
+  where (prog', args') = buildProcProg priv prog args
+buildSshCmd user host priv (Shell cmd) = P.proc "ssh" $ [user ++ "@" ++ host, cmd']
+  where cmd' = buildShellCmd priv cmd
+
+buildProcProg :: ExecPriv -> FilePath -> [String] -> (FilePath, [String])
 buildProcProg ExecNormal             prog args = (prog, args)
 buildProcProg (ExecSudo Nothing)     prog args = ("sudo", prog:args)
 buildProcProg (ExecSudo (Just user)) prog args = ("sudo", ["-u", user] ++ prog:args)
 
-buildShellCmd :: ExecPrivileges -> String -> String
-buildShellCmd sudoMode = case sudoMode of
+buildShellCmd :: ExecPriv -> String -> String
+buildShellCmd priv = case priv of
     ExecNormal           -> strictMode
     ExecSudo Nothing     -> strictMode . sudo
     ExecSudo (Just user) -> strictMode . sudoUser user
   where strictMode = ("set -o errexit -o nounset -o pipefail; " ++)
         sudo       = ("sudo " ++)
         sudoUser u = (("sudo -u " ++ u ++ " " :: String) ++)
-
-buildSshCmd :: Maybe String -> String -> [String] -> (FilePath, [String])
-buildSshCmd (Just user) host args = ("ssh", (user ++ "@" ++ host):args)
-buildSshCmd Nothing     host args = ("ssh", host:args)
 
 run :: Step -> Recipe f ()
 run = void . run' Nothing
@@ -318,13 +311,13 @@ run' :: Maybe IORedir -> Step -> Recipe f (Maybe (ByteString, ByteString))
 run' ioredir step = do
     dir <- gets ctxCwd
     env <- procEnv
-    target <- gets ctxTarget
-    sudo <- gets ctxSudo
+    mode <- gets ctxMode
+    sudo <- gets ctxPriv
 
-    let setCwd   = maybe id P.setWorkingDir dir -- FIXME: Not in SSH, user 'cd dir; exec prog'
-        setEnv   = maybe id P.setEnv env -- FIXME: Not in SSH, user SendEnv
+    let setCwd   = maybe id P.setWorkingDir dir -- FIXME: withCd broken, use execcwd.sh
+        setEnv   = maybe id P.setEnv env -- FIXME: Put them as: ssh user@host 'FOO="BAR BUR"' prog args...?
         setStdin = P.setStdin . P.byteStringInput
-        pCfg     = setCwd . setEnv $ buildProCfg target sudo step
+        pCfg     = setCwd . setEnv $ buildProCfg mode sudo step
 
     (exit, outErr) <- case ioredir of
         Nothing -> do
@@ -397,9 +390,9 @@ runRecipeConfEither conf@(RecipeConf {..}) recipe =
         ctxRecipeNames = []
       , ctxCwd         = Nothing
       , ctxEnv         = Nothing
-      , ctxTarget      = ExecLocal
+      , ctxMode        = ExecLocal
       , ctxTrace       = mempty
-      , ctxSudo        = ExecNormal
+      , ctxPriv        = ExecNormal
       , ctxRecipeConf  = conf
       }
     in getIO . flip evalStateT ctx $ runExceptT recipe
