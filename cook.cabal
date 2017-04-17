@@ -1,7 +1,7 @@
 name:                cook
 version:             0.1.0.0
 synopsis:            Simple/effective configuration management + deployment done in Haskell
-description:         F*ck shell script!
+description:         Forget shell script!
 homepage:            https://github.com/jimenezrick/cook.hs
 license-file:        LICENSE
 license:             MIT
