@@ -47,7 +47,6 @@ library
                      , containers
                      , unordered-containers
                      , data-default
-                     , semigroups
                      , lifted-base
                      , filepath
                      , filemanip
@@ -59,8 +58,7 @@ library
                      , network
                      , http-conduit
                      , directory
-                     , process
-                     , process-extras
+                     , typed-process
                      , uuid
                      , yaml
                      , aeson
