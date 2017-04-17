@@ -14,7 +14,7 @@ requireIPFS = withRecipeName "IPFS.RequireIPFS" $ do
     requirePackages ["go-ipfs"]
     addUser True [] "ipfs"
     void $ withSudoUser "ipfs" $ do
-        home <- getEnv "HOME"
+        Just home <- getEnv "HOME"
         withCd home $ do
             withoutError $ runProc "ipfs" ["init"]
     enableService "ipfs"

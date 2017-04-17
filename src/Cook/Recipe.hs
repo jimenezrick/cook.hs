@@ -11,7 +11,6 @@ module Cook.Recipe (
   , runProc
   , runProc'
   , runSh
-  , runWith
   , runRead
   , runRead'
   , runReadWith
@@ -28,6 +27,7 @@ module Cook.Recipe (
   , withCd
   , withEnv
   , withoutError
+  , withoutErrorWhen
   , withSudo
   , withSudoUser
 
@@ -36,7 +36,6 @@ module Cook.Recipe (
   , runRecipe
   , runRecipeConf
   , failWith
-  , failWith'
   , catchException
 
   , F.FsTree (..)
@@ -55,7 +54,7 @@ import Control.Monad.Morph
 import Control.Monad.State
 import Data.ByteString.Lazy (ByteString, empty)
 import Data.List
-import Data.List.NonEmpty (NonEmpty, toList)
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe
 import Data.Text.Lazy (Text)
 import Network.BSD
@@ -67,6 +66,7 @@ import System.IO
 import System.Process (CreateProcess (..))
 import Text.Printf
 
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.Encoding as T
@@ -93,25 +93,30 @@ data Ctx = Ctx {
     ctxRecipeNames :: [String]
   , ctxCwd         :: Maybe FilePath
   , ctxEnv         :: Maybe [(String, String)]
-  , ctxTrace       :: Trace
+  , ctxTrace       :: [Trace]
   , ctxSudo        :: ExecPrivileges
   , ctxRecipeConf  :: RecipeConf
   } deriving Show
 
-type Trace = [(Step, Ctx)]
+type Trace = (Result, Ctx)
 
-type Code = Int
+type Recipe = ExceptT (NonEmpty Trace) (StateT Ctx IO)
 
-type Recipe = ExceptT (Trace, Code) (StateT Ctx IO)
-
+-- XXX: pipe builder
+-- XXX: type Input = Maybe Text
 data Step = Proc FilePath [String]
+          {-| ProcIn FilePath [String] Text-}
           | Shell String
-          | Failure String
+          {-| ShellIn String Text-}
+
+data Result = StepSucceeded Step
+            | StepFailed Step Int
+            | Failure String
+            deriving Show
 
 instance Show Step where
     show (Proc prog args) = printf "process: %s %s" prog (unwords args)
     show (Shell cmd)      = printf "shell:   %s" cmd
-    show (Failure msg)    = printf "failure: %s" msg
 
 defRecipeConf :: IO RecipeConf
 defRecipeConf = do
@@ -151,13 +156,11 @@ sh = Shell
 
 failWith :: String -> Recipe a
 failWith msg = do
-    trace $ Failure msg
-    failWith' 1
+    traceResult $ Failure msg
+    abortRecipe
 
-failWith' :: Code -> Recipe a
-failWith' code = do
-    trc <- gets ctxTrace
-    throwError (trc, code)
+abortRecipe :: Recipe a
+abortRecipe = gets ctxTrace >>= throwError . NE.fromList
 
 catchException :: Recipe a -> Recipe a
 catchException = handle (\e -> failWith $ show (e :: SomeException))
@@ -165,15 +168,15 @@ catchException = handle (\e -> failWith $ show (e :: SomeException))
 withCtx :: (Ctx -> Ctx) -> Recipe a -> Recipe a
 withCtx f recipe = do
     ctx <- get
-    (trc, a) <- hoist (withStateT f) $ do
+    (trace, a) <- hoist (withStateT f) $ do
         ctx' <- get
         let conf = ctxRecipeConf ctx'
         when (recipeConfDebug conf) $
             liftIO $ hPrintf stderr "Cook: using %s\n" (show ctx')
         a <- recipe
-        trc <- gets ctxTrace
-        return (trc, a)
-    put ctx { ctxTrace = trc }
+        trace <- gets ctxTrace
+        return (trace, a)
+    put ctx { ctxTrace = trace }
     return a
 
 withRecipeName :: String -> Recipe a -> Recipe a
@@ -196,8 +199,18 @@ withCd dir = withCtx (chdir dir)
 withEnv :: [(String, String)] -> Recipe a -> Recipe a
 withEnv env = withCtx (\ctx -> ctx { ctxEnv = Just env })
 
-withoutError :: Recipe a -> Recipe (Either Code a)
-withoutError recipe = (Right <$> recipe) `catchError` \(_, code) -> return $ Left code
+withoutError :: Recipe a -> Recipe (Either Result a)
+withoutError recipe = (Right <$> recipe) `catchError` \(trace) -> return . Left . fst $ NE.head trace
+
+withoutErrorWhen :: (Int -> Maybe a) -> Recipe a -> Recipe a
+withoutErrorWhen isCode recipe = do
+    result <- withoutError recipe
+    case result of
+        Left (StepSucceeded _ )                          -> error "Recipe.withoutErrorWhen: invalid case"
+        Left (StepFailed _ code) | Just v <- isCode code -> return v
+                                 | otherwise             -> abortRecipe
+        Left (Failure _)                                 -> abortRecipe
+        Right v                                          -> return v
 
 withSudo :: Recipe a -> Recipe a
 withSudo = withCtx $ \ctx -> ctx { ctxSudo = ExecSudo }
@@ -213,10 +226,10 @@ getCwd = do
         Nothing  -> liftIO getCurrentDirectory
         Just dir -> liftIO $ canonicalizePath dir
 
-trace :: Step -> Recipe ()
-trace step = do
+traceResult :: Result -> Recipe ()
+traceResult result = do
     dir <- getCwd
-    modify $ \ctx@Ctx {..} -> ctx { ctxTrace = (step, ctx { ctxCwd = Just dir }):ctxTrace }
+    modify $ \ctx@Ctx {..} -> ctx { ctxTrace = (result, ctx { ctxCwd = Just dir }):ctxTrace }
 
 buildProcProg :: ExecPrivileges -> FilePath -> [String] -> (FilePath, [String])
 buildProcProg ExecNormal          prog args = (prog, args)
@@ -235,11 +248,16 @@ buildShellCmd sudoMode = case sudoMode of
 run :: Step -> Recipe ()
 run step = do
     sudo <- gets ctxSudo
-    trace step
-    case step of
-        Proc prog args -> runWith $ uncurry P.proc $ buildProcProg sudo prog args
-        Shell cmd      -> runWith $ P.shell $ buildShellCmd sudo cmd
-        Failure _      -> error "Recipe.run: unreachable case"
+    let proc = case step of
+                   Proc prog args -> uncurry P.proc $ buildProcProg sudo prog args
+                   Shell cmd      -> P.shell $ buildShellCmd sudo cmd
+    dir <- gets ctxCwd
+    env <- procEnv
+    (_, _, _, p) <- liftIO $ P.createProcess proc { cwd = dir, env = env }
+    exit <- liftIO $ P.waitForProcess p
+    case exit of
+        ExitFailure code -> traceResult (StepFailed step code) >> abortRecipe
+        ExitSuccess      -> traceResult $ StepSucceeded step
 
 runProc :: FilePath -> [String] -> Recipe ()
 runProc = (fmap . fmap) run proc
@@ -249,18 +267,6 @@ runProc' = run . proc'
 
 runSh :: String -> Recipe ()
 runSh = run . sh
-
-runWith :: CreateProcess -> Recipe ()
-runWith p = do
-    dir <- gets ctxCwd
-    env <- procEnv
-    (_, _, _, ph) <- liftIO $ P.createProcess p { cwd = dir, env = env }
-    exit <- liftIO $ P.waitForProcess ph
-    case exit of
-        ExitFailure code -> do
-            trc <- gets ctxTrace
-            throwError (trc, code)
-        _ -> return ()
 
 runRead :: Step -> Recipe (Text, Text)
 runRead step = runTakeRead step T.empty
@@ -278,23 +284,28 @@ runTakeRead step input = do
 
 runTakeRead' :: Step -> ByteString -> Recipe (ByteString, ByteString)
 runTakeRead' step input = do
-    sudo <- gets ctxSudo
-    trace step
-    case step of
-        Proc prog args -> runTakeReadWith (uncurry P.proc $ buildProcProg sudo prog args) input
-        Shell cmd      -> runTakeReadWith (P.shell $ buildShellCmd sudo cmd) input
-        Failure _      -> error "Recipe.runTakeRead: unreachable case"
+    undefined
+    {-
+     -sudo <- gets ctxSudo
+     -traceResult step
+     -case step of
+     -    Proc prog args -> runTakeReadWith (uncurry P.proc $ buildProcProg sudo prog args) input
+     -    Shell cmd      -> runTakeReadWith (P.shell $ buildShellCmd sudo cmd) input
+     -}
 
 runTakeReadWith :: CreateProcess -> ByteString -> Recipe (ByteString, ByteString)
 runTakeReadWith p input = do
-    dir <- gets ctxCwd
-    env <- procEnv
-    (exit, out, err) <- liftIO $ PB.readCreateProcessWithExitCode p { cwd = dir, env = env } input
-    case exit of
-        ExitFailure code -> do
-            trc <- gets ctxTrace
-            throwError (trc, code)
-        _ -> return (out, err)
+    undefined
+    {-
+     -dir <- gets ctxCwd
+     -env <- procEnv
+     -(exit, out, err) <- liftIO $ PB.readCreateProcessWithExitCode p { cwd = dir, env = env } input
+     -case exit of
+     -    ExitFailure code -> do
+     -        trace <- gets ctxTrace
+     -        throwError (trace, code)
+     -    _ -> return (out, err)
+     -}
 
 runRecipe :: Recipe a -> IO ()
 runRecipe recipe = do
@@ -315,10 +326,12 @@ runRecipeConf conf recipe = do
         hPrintf stderr "Cook: running with %s\n" (show conf)
     r <- flip evalStateT ctx $ runExceptT recipe
     case r of
-        Left ([], _)                   -> error "Recipe.runRecipeConf: empty trace"
-        Left (trc@((_, ctx'):_), code) -> do
-            printTrace (recipeTraceLength conf) trc
-            hPrintf stderr "Cook: process exited with code %d\n" code
+        Left trace@((result, ctx'):|_) -> do
+            printTrace (recipeTraceLength conf) trace
+            case result of
+                StepSucceeded _   -> error "Recipe.runRecipeConf: invalid case"
+                StepFailed _ code -> hPrintf stderr "Cook: process exited with code %d\n" code
+                Failure msg       -> hPrintf stderr "Cook: step failed with %s\n" msg
             hPrintf stderr "      using %s\n" (show ctx' { ctxTrace = [] })
         Right _ | recipeConfVerbose conf -> hPutStrLn stderr "Cook: recipe successful"
                 | otherwise              -> return ()
@@ -336,15 +349,14 @@ runPipeTakeRead :: NonEmpty Step -> Text -> Recipe Text
 runPipeTakeRead pipe input = T.decodeUtf8 <$> (runPipeTakeRead' pipe $ T.encodeUtf8 input)
 
 runPipeTakeRead' :: NonEmpty Step -> ByteString -> Recipe ByteString
-runPipeTakeRead' pipe input = build (toList pipe) input
+runPipeTakeRead' pipe input = build (NE.toList pipe) input
   where build []     input' = return input'
         build (s:ss) input' = do
             (out, _) <- runTakeRead' s input'
             build ss out
 
-printTrace :: Int -> Trace -> IO ()
-printTrace _ []                     = return ()
-printTrace n (failed@(_, ctx):prev) = do
+printTrace :: Int -> NonEmpty Trace -> IO ()
+printTrace n (failed@(_, ctx):|prev) = do
     let name = maybe "" (" " ++) (showCtxRecipeName ctx)
     hPrintf stderr "Cook: error in recipe%s:\n" name
     mapM_ (hPutStrLn stderr . ("  " ++) . fmt) $ reverse $ take n prev
@@ -356,7 +368,5 @@ showCtxRecipeName :: Ctx -> Maybe String
 showCtxRecipeName Ctx { ctxRecipeNames = [] } = Nothing
 showCtxRecipeName Ctx { ctxRecipeNames = ns } = Just $ intercalate "." $ reverse ns
 
-getEnv :: String -> Recipe String
-getEnv var = do
-    val <- liftIO $ lookupEnv var
-    maybe (failWith $ printf "getEnv: %s is not defined" var) return val
+getEnv :: String -> Recipe (Maybe String)
+getEnv = liftIO . lookupEnv

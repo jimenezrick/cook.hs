@@ -12,16 +12,12 @@ addUser createHome extraGroups user =
     let homeFlag   = if createHome then ["-m"] else []
         groupsFlag = if null extraGroups then [] else ["-G", intercalate "," extraGroups]
     in withRecipeName "User.Add" $ do
-        err <- withoutError $ runProc "useradd" $ homeFlag ++ groupsFlag ++ [user]
-        case err of
-            Left code | code /= userAlreadyExists -> failWith' code
-            _                                     -> return ()
-  where userAlreadyExists = 9
+        withoutErrorWhen userAlreadyExists $ runProc "useradd" $ homeFlag ++ groupsFlag ++ [user]
+  where userAlreadyExists 9 = Just ()
+        userAlreadyExists _ = Nothing
 
 delUser :: String -> Recipe ()
 delUser user = withRecipeName "User.Delete" $ do
-    err <- withoutError $ runProc "userdel" ["-r", user]
-    case err of
-        Left code | code /= userDontExists -> failWith' code
-        _                                  -> return ()
-  where userDontExists = 6
+    withoutErrorWhen userDontExists $ runProc "userdel" ["-r", user]
+  where userDontExists 6 = Just ()
+        userDontExists _ = Nothing
