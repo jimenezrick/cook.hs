@@ -1,5 +1,5 @@
 name:                cook
-version:             0.1.0.0
+version:             0.1.1.0
 synopsis:            Simple/effective configuration management + deployment done in Haskell
 description:         Forget shell script!
 homepage:            https://github.com/jimenezrick/cook.hs

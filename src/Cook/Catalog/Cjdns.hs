@@ -70,7 +70,7 @@ getPeers :: Recipe (Value, Value)
 getPeers = withRecipeName "GetPeers" $ do
     withTempDir $ \tmpDir -> do
         tarball <- getHTTP "https://github.com/hyperboria/peers/archive/master.tar.gz"
-        void $ runTakeRead' (proc "tar" ["xz", "--strip-components=1"]) tarball
+        void $ runInOutB tarball (proc "tar" ["xz", "--strip-components=1"])
         peerFiles <- liftIO $ find always (extension ==? ".k") tmpDir
 
         liftIO $ putStrLn "Loading public peers:"
@@ -84,7 +84,7 @@ getPeers = withRecipeName "GetPeers" $ do
 
 generateConfig :: Recipe Value
 generateConfig = withRecipeName "GenerateConfig" $ do
-    conf <- runPipeRead [proc "cjdroute" ["--genconf"], proc "cjdroute" ["--cleanconf"]]
+    conf <- runPipeOut [proc "cjdroute" ["--genconf"], proc "cjdroute" ["--cleanconf"]]
     readConfig JSON conf
 
 requireCjdcmd :: Recipe ()

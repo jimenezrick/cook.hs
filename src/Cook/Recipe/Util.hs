@@ -16,7 +16,7 @@ import Cook.Recipe
 
 withTempDir :: (FilePath -> Recipe a) -> Recipe a
 withTempDir recipe = withRecipeName "Util.WithTempDir" $ catchException $ do
-    (tmpDir, _) <- runRead $ proc "mktemp" ["--tmpdir", "--directory", "cook-XXXXXX"]
+    (tmpDir, _) <- runOut $ proc "mktemp" ["--tmpdir", "--directory", "cook-XXXXXX"]
     let tmpDir' = head . lines $ unpack tmpDir
     a <- withCd tmpDir' $ recipe tmpDir'
     runProc "rm" ["-rf", tmpDir']
