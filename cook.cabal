@@ -6,7 +6,7 @@ homepage:            https://github.com/jimenezrick/cook.hs
 license-file:        LICENSE
 license:             MIT
 author:              Ricardo Catalinas Jiménez <r@untroubled.be>
-copyright:           Copyright (c) 2016 Ricardo Catalinas Jiménez
+copyright:           Copyright (c) 2017 Ricardo Catalinas Jiménez
 category:            Utility
 build-type:          Simple
 extra-source-files:  README
@@ -67,6 +67,8 @@ library
                      , file-embed
                      , lens
                      , lens-aeson
+                     , split
+                     , safe
 
 executable cook-contain
   ghc-options:         -Wall

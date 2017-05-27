@@ -1,17 +1,24 @@
-{-# LANGUAGE OverloadedStrings #-}
-
-import Control.Monad.IO.Class
-import Data.Text.Lazy
-
-import qualified Data.Text.Lazy.IO as T
-
 import Cook.Recipe
 import Cook.Catalog.Cjdns
 
 main :: IO ()
-main = testCjdns
+main = do
+    --testCjdns
+    --testSsh
+    testError
 
 testCjdns :: IO ()
-testCjdns = do
-    runRecipe $ do
-        requireCjdns "conf/cjdns/node.yaml"
+testCjdns = runRecipe $ do
+    requireCjdns "conf/cjdns/node.yaml"
+
+testSsh :: IO ()
+testSsh = runRecipe $ do
+    withSshUser "root" "51.15.58.63" $ do
+        runProc0 "uptime"
+
+testError :: IO ()
+testError = runRecipe $ do
+    withRecipeName "foo.bar.xxx.in" $ do
+        withRecipeName "foo.bar.here" $ do
+            withRecipeName "foo.bar.yyy.there" $ do
+                failWith "WTF"

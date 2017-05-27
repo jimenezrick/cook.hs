@@ -60,9 +60,11 @@ import Control.Monad.State
 import Data.ByteString.Lazy (ByteString, empty)
 import Data.List
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.List.Split (splitOn)
 import Data.Maybe
 import Data.Text.Lazy (Text)
 import Network.BSD
+import Safe (headMay)
 import System.Directory
 import System.Environment (lookupEnv, getEnvironment)
 import System.Exit
@@ -188,7 +190,7 @@ withCtx f recipe = do
     return a
 
 withRecipeName :: String -> Recipe a -> Recipe a
-withRecipeName name recipe = withCtx (\ctx@Ctx {..} -> ctx { ctxRecipeNames = name:ctxRecipeNames }) $ do
+withRecipeName name recipe = withCtx (\ctx@Ctx {..} -> ctx { ctxRecipeNames = addRecipeName ctxRecipeNames name }) $ do
     ctx <- get
     let conf = ctxRecipeConf ctx
     case showCtxRecipeName ctx of
@@ -196,6 +198,14 @@ withRecipeName name recipe = withCtx (\ctx@Ctx {..} -> ctx { ctxRecipeNames = na
           | recipeConfVerbose conf -> liftIO $ hPrintf stderr "Cook: in %s\n" recipeName
         _                          -> return ()
     recipe
+
+addRecipeName :: [String] -> String -> [String]
+addRecipeName []   name   = [name]
+addRecipeName prev name
+  | Just s <- commonScope = intercalate "." (splitOn "." name \\ s):prev
+  | otherwise             = name:prev
+  where commonScope = headMay $ dropWhile (not . (`isPrefixOf` splitOn "." name)) scopes
+        scopes      = concatMap (reverse . tail . inits . splitOn ".") prev
 
 withCd :: FilePath -> Recipe a -> Recipe a
 withCd dir = withCtx (chdir dir)
