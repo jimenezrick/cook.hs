@@ -27,6 +27,10 @@ isPackageInstalled pkg = withRecipeName "IsPackageInstalled" $ do
     err <- withoutError $ runOut $ pacman ["-Q", pkg]
     either (const $ return False) (const $ return True) err
 
+clearCache :: Recipe ()
+clearCache = withRecipeName "Arch.Pacman.ClearCache" $ do
+    run $ pacman ["-Scc"]
+
 requirePackages :: NonEmpty String -> Recipe ()
 requirePackages pkgs = withRecipeName "Arch.Pacman.RequirePackages" $ do
     missingPkgs <- filterM (fmap not . isPackageInstalled) $ toList pkgs
@@ -35,3 +39,4 @@ requirePackages pkgs = withRecipeName "Arch.Pacman.RequirePackages" $ do
         _  -> do
             upgradePackages
             installPackages $ fromList missingPkgs
+            clearCache
