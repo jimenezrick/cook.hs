@@ -58,6 +58,7 @@ import Control.Monad.Except
 import Control.Monad.Morph
 import Control.Monad.State
 import Data.ByteString.Lazy (ByteString, empty)
+import Data.Char (toUpper)
 import Data.List
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.List.Split (splitOn)
@@ -190,7 +191,7 @@ withCtx f recipe = do
     return a
 
 withRecipeName :: String -> Recipe a -> Recipe a
-withRecipeName name recipe = withCtx (\ctx@Ctx {..} -> ctx { ctxRecipeNames = addRecipeName ctxRecipeNames name }) $ do
+withRecipeName name recipe = withCtx (\ctx@Ctx {..} -> ctx { ctxRecipeNames = addRecipeName ctxRecipeNames casedName }) $ do
     ctx <- get
     let conf = ctxRecipeConf ctx
     case showCtxRecipeName ctx of
@@ -198,11 +199,14 @@ withRecipeName name recipe = withCtx (\ctx@Ctx {..} -> ctx { ctxRecipeNames = ad
           | recipeConfVerbose conf -> liftIO $ hPrintf stderr "Cook: in %s\n" recipeName
         _                          -> return ()
     recipe
+  where up ""     = ""
+        up (n:ns) = toUpper n : ns
+        casedName = intercalate "." . map up $ splitOn "." name
 
 addRecipeName :: [String] -> String -> [String]
 addRecipeName []   name   = [name]
 addRecipeName prev name
-  | Just s <- commonScope = intercalate "." (splitOn "." name \\ s):prev
+  | Just s <- commonScope = intercalate "." (splitOn "." name \\ s) : prev
   | otherwise             = name:prev
   where commonScope = headMay $ dropWhile (not . (`isPrefixOf` splitOn "." name)) scopes
         scopes      = concatMap (reverse . tail . inits . splitOn ".") prev
