@@ -39,6 +39,8 @@ module Cook.Recipe (
   , recipeConf
   , runRecipe
   , runRecipeConf
+  , runRecipeConfEither
+  , printRecipeFailure
   , failWith
   , catchException
 
@@ -110,7 +112,9 @@ data Ctx = Ctx {
   , ctxRecipeConf  :: RecipeConf
   } deriving Show
 
-type Recipe = ExceptT (NonEmpty TraceStep) (StateT Ctx IO)
+type RecipeFailTrace = NonEmpty TraceStep
+
+type Recipe = ExceptT RecipeFailTrace (StateT Ctx IO)
 
 data Step = Proc FilePath [String]
           | Shell String
@@ -356,6 +360,16 @@ runRecipe recipe = do
 
 runRecipeConf :: RecipeConf -> Recipe a -> IO ()
 runRecipeConf conf recipe = do
+    when (recipeConfVerbose conf) $
+        hPrintf stderr "Cook: running with %s\n" (show conf)
+    r <- runRecipeConfEither conf recipe
+    case r of
+        Left failure                     -> printRecipeFailure conf failure
+        Right _ | recipeConfVerbose conf -> hPutStrLn stderr "Cook: recipe successful"
+                | otherwise              -> return ()
+
+runRecipeConfEither :: RecipeConf -> Recipe a -> IO (Either RecipeFailTrace a)
+runRecipeConfEither conf recipe =
     let ctx = Ctx {
         ctxRecipeNames = []
       , ctxCwd         = Nothing
@@ -365,19 +379,16 @@ runRecipeConf conf recipe = do
       , ctxSudo        = ExecNormal
       , ctxRecipeConf  = conf
       }
-    when (recipeConfVerbose conf) $
-        hPrintf stderr "Cook: running with %s\n" (show conf)
-    r <- flip evalStateT ctx $ runExceptT recipe
-    case r of
-        Left trace@((result, ctx'):|_) -> do
-            printTrace (recipeTraceLength conf) trace
-            case result of
-                StepSucceeded _   -> error "Recipe.runRecipeConf: invalid pattern"
-                StepFailed _ code -> hPrintf stderr "Cook: process exited with code %d\n" code
-                Failure msg       -> hPrintf stderr "Cook: step failed because: %s\n" msg
-            hPrintf stderr "      using %s\n" (show ctx' { ctxTrace = [] })
-        Right _ | recipeConfVerbose conf -> hPutStrLn stderr "Cook: recipe successful"
-                | otherwise              -> return ()
+    in flip evalStateT ctx $ runExceptT recipe
+
+printRecipeFailure :: RecipeConf -> RecipeFailTrace -> IO ()
+printRecipeFailure conf trace@((result, ctx'):|_) = do
+    printRecipeTrace (recipeTraceLength conf) trace
+    case result of
+        StepSucceeded _   -> error "Recipe.runRecipeConf: invalid pattern"
+        StepFailed _ code -> hPrintf stderr "Cook: process exited with code %d\n" code
+        Failure msg       -> hPrintf stderr "Cook: step failed because: %s\n" msg
+    hPrintf stderr "      using %s\n" (show ctx' { ctxTrace = [] })
 
 runPipe :: NonEmpty Step -> Recipe ()
 runPipe pipe = runPipeOut pipe >>= liftIO . T.putStr
@@ -398,8 +409,8 @@ runPipeInOutB input pipe = build (NE.toList pipe) input
             (out, _) <- runInOutB input' s
             build ss out
 
-printTrace :: Int -> NonEmpty TraceStep -> IO ()
-printTrace n (failed@(_, ctx):|prev) = do
+printRecipeTrace :: Int -> RecipeFailTrace -> IO ()
+printRecipeTrace n (failed@(_, ctx):|prev) = do
     let name = maybe "" (" " ++) (showCtxRecipeName ctx)
     hPrintf stderr "Cook: error in recipe%s:\n" name
     mapM_ (hPutStrLn stderr . ("  " ++) . fmt) $ reverse $ take n prev
