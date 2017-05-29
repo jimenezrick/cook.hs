@@ -1,6 +1,7 @@
 module Cook.Catalog.SSH (
     copyId
   , authorizeKey
+  , copyFile
   ) where
 
 import System.FilePath
@@ -20,3 +21,6 @@ authorizeKey pubKeyPath user = withRecipeName "SSH.AuthorizeKey" $ do
                ]
         key  = Copy pubKeyPath
         home = "/home" </> user
+
+copyFile :: String -> String -> FilePath -> FilePath -> Recipe()
+copyFile user host src dst = runProc "scp" [src, printf "%s@%s:%s" user host dst]

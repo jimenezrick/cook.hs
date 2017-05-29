@@ -116,8 +116,8 @@ data Step = Proc FilePath [String]
           | Shell String
 
 instance Show Step where
-    show (Proc prog args) = printf "process: %s %s" prog (unwords args)
-    show (Shell cmd)      = printf "shell:   %s" cmd
+    show (Proc prog args) = printf "process: \"%s %s\"" prog (unwords args)
+    show (Shell cmd)      = printf "shell:   \"%s\"" cmd
 
 data Result = StepSucceeded Step
             | StepFailed Step Int

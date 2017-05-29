@@ -15,7 +15,7 @@ aptGet args = withEnv [("DEBIAN_FRONTEND", "noninteractive")] $ do
 
 clearCache :: Recipe ()
 clearCache = withRecipeName "Debian.Apt.ClearCache" $ do
-    aptGet ["purgue", "--auto-remove"]
+    aptGet ["--auto-remove", "purge"]
     aptGet ["clean"]
 
 installPackages :: NonEmpty String -> Recipe ()
