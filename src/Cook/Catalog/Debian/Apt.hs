@@ -29,6 +29,5 @@ upgradePackages = withRecipeName "Debian.Apt.UpgradePackages" $ do
 
 requirePackages :: NonEmpty String -> Recipe ()
 requirePackages pkgs = withRecipeName "Debian.Apt.RequirePackages" $ do
-    upgradePackages
     installPackages pkgs
     clearCache

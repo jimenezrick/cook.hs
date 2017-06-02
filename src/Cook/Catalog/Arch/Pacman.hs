@@ -37,6 +37,5 @@ requirePackages pkgs = withRecipeName "Arch.Pacman.RequirePackages" $ do
     case missingPkgs of
         [] -> return ()
         _  -> do
-            upgradePackages
             installPackages $ fromList missingPkgs
             clearCache

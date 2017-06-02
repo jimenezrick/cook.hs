@@ -3,8 +3,8 @@ import Cook.Catalog.Cjdns
 
 main :: IO ()
 main = do
-    --testCjdns
-    --testSsh
+    testCjdns
+    testSsh
     testError
 
 testCjdns :: IO ()

@@ -34,6 +34,7 @@ library
                      , Cook.Catalog.Git
                      , Cook.Catalog.Go
                      , Cook.Catalog.IPFS
+                     , Cook.Catalog.Rkt
                      , Cook.Catalog.SSH
                      , Cook.Catalog.Sudo
                      , Cook.Catalog.Arch.Pacman
@@ -74,13 +75,6 @@ executable cook-contain
   ghc-options:         -Wall
   default-language:    Haskell2010
   main-is:             tools/Contain.hs
-  build-depends:       base >=4.8 && <5
-                     , cook
-
-executable cook-cjdns
-  ghc-options:         -Wall
-  default-language:    Haskell2010
-  main-is:             tools/Cjdns.hs
   build-depends:       base >=4.8 && <5
                      , cook
 

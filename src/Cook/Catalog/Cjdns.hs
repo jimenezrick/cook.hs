@@ -1,5 +1,6 @@
 module Cook.Catalog.Cjdns (
     CjdnsOpts (..)
+  , setUpCjdns
   , requireCjdns
   , requireCjdcmd
   ) where
@@ -27,10 +28,6 @@ import Cook.Catalog.Arch.Pacman
 import Cook.Catalog.Go
 import Cook.Catalog.Systemd
 
---
--- TODO: nftables
---
-
 data CjdnsOpts = CjdnsOpts
     { privateKey          :: Text
     , publicKey           :: Text
@@ -49,6 +46,8 @@ requireCjdns optsPath = withRecipeName "Cjdns.RequireCjdns" $ do
     requirePackages ["cjdns"]
     opts <- loadConfig YAML optsPath
     setUpCjdns opts
+    enableService "cjdns"
+    startService "cjdns"
 
 setUpCjdns :: CjdnsOpts -> Recipe ()
 setUpCjdns opts = withRecipeName "SetUpCjdns" $ do
@@ -60,11 +59,8 @@ setUpCjdns opts = withRecipeName "SetUpCjdns" $ do
             mergeConfig (toJSON opts) defConf
 
     createFsTree "/etc" $ File "cjdroute.conf" (Content conf) (Just 0o600, Just ("root", "root"))
-    enableService "cjdns"
-    startService "cjdns"
 
-    -- To test conf generation:
-    --createFsTree "." $ File "cjdroute.conf" (Content conf) defAttrs
+    -- To test conf generation: createFsTree "." $ File "cjdroute.conf" (Content conf) defAttrs
 
 getPeers :: Recipe (Value, Value)
 getPeers = withRecipeName "GetPeers" $ do
