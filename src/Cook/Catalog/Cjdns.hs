@@ -26,7 +26,6 @@ import Cook.Recipe.Config
 import Cook.Recipe.Util
 import Cook.Catalog.Arch.Pacman
 import Cook.Catalog.Go
-import Cook.Catalog.Systemd
 
 data CjdnsOpts = CjdnsOpts
     { privateKey          :: Text
@@ -46,8 +45,6 @@ requireCjdns optsPath = withRecipeName "Cjdns.RequireCjdns" $ do
     requirePackages ["cjdns"]
     opts <- loadConfig YAML optsPath
     setUpCjdns opts
-    enableService "cjdns"
-    startService "cjdns"
 
 setUpCjdns :: CjdnsOpts -> Recipe ()
 setUpCjdns opts = withRecipeName "SetUpCjdns" $ do
