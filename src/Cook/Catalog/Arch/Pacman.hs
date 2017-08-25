@@ -2,6 +2,7 @@ module Cook.Catalog.Arch.Pacman (
     upgradePackages
   , installPackages
   , requirePackages
+  , provider
   ) where
 
 import Control.Monad
@@ -9,6 +10,7 @@ import Data.List.NonEmpty
 import Data.Semigroup
 
 import Cook.Recipe
+import Cook.Recipe.Provider.PkgManager
 
 pacman :: NonEmpty String -> Step
 pacman args = proc "pacman" $ toList $ ["--quiet", "--noconfirm"] <> args
@@ -39,3 +41,10 @@ requirePackages pkgs = withRecipeName "Arch.Pacman.RequirePackages" $ do
         _  -> do
             installPackages $ fromList missingPkgs
             clearCache
+
+provider :: Provider
+provider = Provider
+    { upgradePackages = upgradePackages
+    , isPackageInstalled = isPackageInstalled
+    , installPackages = installPackages
+    }
