@@ -20,5 +20,5 @@ buildRootfs path extraPkgs = withRecipeName "Arch.Rootfs.BuildRootfs" $ do
 
 enablePts0 :: FilePath -> Recipe ()
 enablePts0 securetty = withRecipeName "EnablePts0" $ do
-    withFileContent securetty $ T.unlines . insertPts0 . T.lines
+    mapFileContent securetty $ T.unlines . insertPts0 . T.lines
   where insertPts0 ls = init ls ++ ["pts/0", "", last ls]

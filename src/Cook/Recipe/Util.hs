@@ -2,6 +2,7 @@ module Cook.Recipe.Util (
     withTempDir
   , getHTTP
   , withFileContent
+  , mapFileContent
   ) where
 
 import Control.Monad.IO.Class
@@ -28,7 +29,11 @@ getHTTP url = withRecipeName "Util.GetHTTP" $ catchException $ do
     res <- httpLBS req
     return $ getResponseBody res
 
-withFileContent :: FilePath -> (Text -> Text) -> Recipe ()
-withFileContent path f = withRecipeName "Util.WithFileContent" $ catchException $ do
+withFileContent :: FilePath -> Recipe Text
+withFileContent path = withRecipeName "Util.WithFileContent" $ catchException $ do
+    liftIO $ T.readFile path
+
+mapFileContent :: FilePath -> (Text -> Text) -> Recipe ()
+mapFileContent path f = withRecipeName "Util.MapFileContent" $ catchException $ do
     content <- liftIO $ T.readFile path
     liftIO . T.writeFile path $ f content
