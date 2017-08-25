@@ -1,6 +1,6 @@
 # Forget shell script!
 
-Simple/effective configuration management + containerization:
+Effective configuration management + containerization:
 
 Use Haskell as an expressive DSL to replace shell script and do all the
 heavy lifting with systemd.

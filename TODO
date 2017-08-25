@@ -1,1 +1,2 @@
-- Try for config: https://hackage.haskell.org/package/dhall
+- Use for config: https://hackage.haskell.org/package/dhall
+- Update cabal.config

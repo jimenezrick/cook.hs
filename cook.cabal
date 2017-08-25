@@ -1,6 +1,6 @@
 name:                cook
 version:             0.1.2.0
-synopsis:            Simple/effective configuration management + deployment done in Haskell
+synopsis:            Effective configuration management done in Haskell
 description:         Forget shell script!
 homepage:            https://github.com/jimenezrick/cook.hs
 license-file:        LICENSE
@@ -25,7 +25,8 @@ library
                      , RankNTypes
                      , GADTs
   hs-source-dirs:      src
-  exposed-modules:     Cook.Recipe
+  exposed-modules:     Cook.Facts
+                     , Cook.Recipe
                      , Cook.Recipe.Config
                      , Cook.Recipe.FsTree
                      , Cook.Recipe.Template
