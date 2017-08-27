@@ -1,5 +1,6 @@
 module Cook.Facts
-    ( grabSystemFacts
+    ( Facts
+    , grabSystemFacts
     , grabOsRelease
     ) where
 
@@ -16,7 +17,7 @@ import Cook.Recipe.Util
 -- 1. Insert in Recipe Ctx?
 -- 2. How to let the user to expand it?
 
-data Distro = Arch | Debian | Ubuntu | CentOS
+data Distro = Arch | Debian | Ubuntu | CentOS deriving Show
 
 lookupDistro :: Text -> Maybe Distro
 lookupDistro name = M.lookup name distros
@@ -29,11 +30,11 @@ lookupDistro name = M.lookup name distros
 data OsRelease = OsRelease
     { _distro  :: Distro
     , _release :: Maybe Text
-    }
+    } deriving Show
 
 data Facts = Facts
     { _osRelease :: OsRelease
-    }
+    } deriving Show
 
 grabSystemFacts :: Recipe Facts
 grabSystemFacts = withRecipeName "Facts.GrabFacts" $
@@ -42,7 +43,7 @@ grabSystemFacts = withRecipeName "Facts.GrabFacts" $
 grabOsRelease :: Recipe OsRelease
 grabOsRelease = withRecipeName "Facts.GrabOsRelease" $ do
     info <- withFileContent "/etc/os-release"
-    let kv = M.fromList . mapMaybe (takeKV . T.splitOn "\n") . drop 1 $ T.lines info
+    let kv = M.fromList . mapMaybe (takeKV . T.splitOn "=") . drop 1 $ T.lines info
         os = do
             let release = T.dropAround (== '"') <$> M.lookup "VERSION_ID" kv
             distro <- M.lookup "ID" kv >>= lookupDistro

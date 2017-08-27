@@ -1,11 +1,18 @@
+import Control.Monad.IO.Class (liftIO)
+
 import Cook.Recipe
+import Cook.Facts
 import Cook.Catalog.Cjdns
 
 main :: IO ()
 main = do
-    testCjdns
-    testSsh
-    testError
+    testGrabSystemFacts
+    {-testSsh-}
+    {-testError-}
+
+testGrabSystemFacts :: IO ()
+testGrabSystemFacts = runRecipe $ do
+    grabSystemFacts >>= liftIO . print
 
 testCjdns :: IO ()
 testCjdns = runRecipe $ do
