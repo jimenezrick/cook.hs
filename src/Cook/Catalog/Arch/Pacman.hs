@@ -10,7 +10,9 @@ import Data.List.NonEmpty
 import Data.Semigroup
 
 import Cook.Recipe
-import Cook.Recipe.Provider.PkgManager
+import Cook.Provider.PkgManager (Provider)
+
+import qualified Cook.Provider.PkgManager as P
 
 pacman :: NonEmpty String -> Step
 pacman args = proc "pacman" $ toList $ ["--quiet", "--noconfirm"] <> args
@@ -43,8 +45,8 @@ requirePackages pkgs = withRecipeName "Arch.Pacman.RequirePackages" $ do
             clearCache
 
 provider :: Provider
-provider = Provider
-    { upgradePackages = upgradePackages
-    , isPackageInstalled = isPackageInstalled
-    , installPackages = installPackages
+provider = P.Provider
+    { P.upgradePackages = upgradePackages
+    , P.isPackageInstalled = isPackageInstalled
+    , P.installPackages = installPackages
     }

@@ -1,5 +1,5 @@
-module Cook.Recipe.Provider.PkgManager
-    ( Provider
+module Cook.Provider.PkgManager
+    ( Provider (..)
     , nullProvider
     ) where
 
