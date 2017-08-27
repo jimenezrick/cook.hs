@@ -1,11 +1,11 @@
-module Cook.Catalog.Arch.Pacman (
-    upgradePackages
+module Cook.Catalog.Arch.Pacman
+  ( upgradePackages
+  , clearPackagesCache
   , installPackages
-  , requirePackages
   , provider
+  , requirePackages -- XXX
   ) where
 
-import Control.Monad
 import Data.List.NonEmpty
 import Data.Semigroup
 
@@ -18,11 +18,11 @@ pacman :: NonEmpty String -> Step
 pacman args = proc "pacman" $ toList $ ["--quiet", "--noconfirm"] <> args
 
 upgradePackages :: Recipe ()
-upgradePackages = withRecipeName "Arch.Pacman.UpgradePackages" $ do
+upgradePackages = withRecipeName "Arch.Pacman.UpgradePackages" $
     run $ pacman ["-Syu"]
 
 installPackages :: NonEmpty String -> Recipe ()
-installPackages pkgs = withRecipeName "Arch.Pacman.InstallPackages" $ do
+installPackages pkgs = withRecipeName "Arch.Pacman.InstallPackages" $
     run $ pacman $ ["--needed", "-S"] <> pkgs
 
 isPackageInstalled :: String -> Recipe Bool
@@ -31,22 +31,20 @@ isPackageInstalled pkg = withRecipeName "IsPackageInstalled" $ do
     err <- withoutError $ runOut $ pacman ["-Q", pkg]
     either (const $ return False) (const $ return True) err
 
-clearCache :: Recipe ()
-clearCache = withRecipeName "Arch.Pacman.ClearCache" $ do
+clearPackagesCache :: Recipe ()
+clearPackagesCache = withRecipeName "Arch.Pacman.ClearPackagesCache" $
     run $ pacman ["-Scc"]
 
-requirePackages :: NonEmpty String -> Recipe ()
-requirePackages pkgs = withRecipeName "Arch.Pacman.RequirePackages" $ do
-    missingPkgs <- filterM (fmap not . isPackageInstalled) $ toList pkgs
-    case missingPkgs of
-        [] -> return ()
-        _  -> do
-            installPackages $ fromList missingPkgs
-            clearCache
-
 provider :: Provider
-provider = P.Provider
-    { P.upgradePackages = upgradePackages
-    , P.isPackageInstalled = isPackageInstalled
-    , P.installPackages = installPackages
-    }
+provider = prov
+  where prov = P.Provider
+            { P.upgradePackages = upgradePackages
+            , P.clearPackagesCache = clearPackagesCache
+            , P.requirePackages = P.requirePackagesGeneric prov
+            , P.isPackageInstalled = isPackageInstalled
+            , P.installPackages = installPackages
+            }
+
+-- XXX: Hack to let it compile, remove
+requirePackages :: NonEmpty String -> Recipe ()
+requirePackages = undefined

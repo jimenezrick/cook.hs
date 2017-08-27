@@ -6,13 +6,9 @@ import Cook.Catalog.Cjdns
 
 main :: IO ()
 main = do
-    testGrabSystemFacts
+    grabSystemFacts >>= print
     {-testSsh-}
     {-testError-}
-
-testGrabSystemFacts :: IO ()
-testGrabSystemFacts = runRecipe $ do
-    grabSystemFacts >>= liftIO . print
 
 testCjdns :: IO ()
 testCjdns = runRecipe $ do

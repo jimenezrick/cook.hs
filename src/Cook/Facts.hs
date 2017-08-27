@@ -4,18 +4,17 @@ module Cook.Facts
     , grabOsRelease
     ) where
 
-import Data.Maybe
+import Control.Error
+import Control.Monad.Except
 import Data.Text (Text)
 
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
-
-import Cook.Recipe
-import Cook.Recipe.Util
+import qualified Data.Text.IO as T
 
 -- TODO:
--- 1. Insert in Recipe Ctx?
--- 2. How to let the user to expand it?
+-- * Insert in Recipe Ctx?
+-- * How to let the user to expand it?
 
 data Distro = Arch | Debian | Ubuntu | CentOS deriving Show
 
@@ -36,13 +35,12 @@ data Facts = Facts
     { _osRelease :: OsRelease
     } deriving Show
 
-grabSystemFacts :: Recipe Facts
-grabSystemFacts = withRecipeName "Facts.GrabFacts" $
-    Facts <$> grabOsRelease
+grabSystemFacts :: IO Facts
+grabSystemFacts = runScript $ Facts <$> grabOsRelease
 
-grabOsRelease :: Recipe OsRelease
-grabOsRelease = withRecipeName "Facts.GrabOsRelease" $ do
-    info <- withFileContent "/etc/os-release"
+grabOsRelease :: Script OsRelease
+grabOsRelease = do
+    info <- scriptIO $ T.readFile "/etc/os-release"
     let kv = M.fromList . mapMaybe (takeKV . T.splitOn "=") . drop 1 $ T.lines info
         os = do
             let release = T.dropAround (== '"') <$> M.lookup "VERSION_ID" kv
@@ -50,6 +48,6 @@ grabOsRelease = withRecipeName "Facts.GrabOsRelease" $ do
             return (distro, release)
     case os of
         Just (distro, release) -> return $ OsRelease distro release
-        Nothing -> failWith "Couldn't parse facts from: /etc/os-release"
+        Nothing -> throwError "Couldn't parse facts from: /etc/os-release"
   where takeKV [k, v] = Just (T.dropWhileEnd (== ':') k, v)
         takeKV _      = Nothing
