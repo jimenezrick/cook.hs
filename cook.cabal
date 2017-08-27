@@ -73,6 +73,8 @@ library
                      , lens-aeson
                      , split
                      , safe
+                     , errors
+                     , time
 
 executable cook-contain
   ghc-options:         -Wall

@@ -1,20 +1,19 @@
 module Cook.Facts
     ( Facts
+    , grabFacts
+    , grabOnlySystemFacts
     , grabSystemFacts
     , grabOsRelease
     ) where
 
 import Control.Error
-import Control.Monad.Except
+import Control.Monad.Except (throwError)
 import Data.Text (Text)
+import Data.Time (UTCTime, getCurrentTime)
 
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-
--- TODO:
--- * Insert in Recipe Ctx?
--- * How to let the user to expand it?
 
 data Distro = Arch | Debian | Ubuntu | CentOS deriving Show
 
@@ -31,12 +30,24 @@ data OsRelease = OsRelease
     , _release :: Maybe Text
     } deriving Show
 
-data Facts = Facts
-    { _osRelease :: OsRelease
+data SystemFacts = SystemFacts
+    { _osRelease   :: OsRelease
+    , _currentTime :: UTCTime
     } deriving Show
 
-grabSystemFacts :: IO Facts
-grabSystemFacts = runScript $ Facts <$> grabOsRelease
+data Facts a = Facts
+    { _systemFacts :: SystemFacts
+    , _customFacts :: a
+    } deriving Show
+
+grabFacts :: IO a -> IO (Facts a)
+grabFacts grabCustom = runScript $ Facts <$> grabSystemFacts <*> scriptIO grabCustom
+
+grabOnlySystemFacts :: IO (Facts ())
+grabOnlySystemFacts = grabFacts $ return ()
+
+grabSystemFacts :: Script SystemFacts
+grabSystemFacts = SystemFacts <$> grabOsRelease <*> scriptIO getCurrentTime
 
 grabOsRelease :: Script OsRelease
 grabOsRelease = do

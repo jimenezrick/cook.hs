@@ -6,7 +6,7 @@ import Cook.Catalog.Cjdns
 
 main :: IO ()
 main = do
-    grabSystemFacts >>= print
+    grabFacts (return ()) >>= print
     {-testSsh-}
     {-testError-}
 
