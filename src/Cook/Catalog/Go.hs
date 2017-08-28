@@ -2,15 +2,17 @@ module Cook.Catalog.Go (
     goGet
   ) where
 
+import Control.Lens
 import System.FilePath ((</>), takeBaseName)
 
+import Cook.Provider
 import Cook.Recipe
 import Cook.Recipe.Util
-import Cook.Catalog.Arch.Pacman
 
-goGet :: String -> Recipe ()
+goGet :: String -> Recipe f ()
 goGet repo = withRecipeName "Go.Get" $ do
-    requirePackages ["go", "git"]
+    prov <- getProvider
+    prov^.pkgManager.requirePackages $ ["go", "git"]
     withTempDir $ \tmpDir -> do
         withEnv [("GOPATH", tmpDir)] $ do
             runProc "go" ["get", repo]

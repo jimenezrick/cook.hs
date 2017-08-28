@@ -1,25 +1,30 @@
 module Cook.Provider
-    ( Provider
-    , provider
+    ( module Cook.Provider.PkgManager
+
+    , Provider
+    , pkgManager
+
+    , getProvider
     ) where
 
 import Control.Lens
 
+import Cook.Provider.PkgManager hiding (Provider)
 import Cook.Recipe
 import Cook.Facts
 
 import qualified Cook.Catalog.Arch.Pacman as A
 import qualified Cook.Provider.PkgManager as P
 
-data Provider = Provider
-    { _pkgManager :: P.Provider
+data Provider f = Provider
+    { _pkgManager :: P.Provider f
     }
 
 makeLenses ''Provider
 
-chooseProvider :: Facts a -> Provider
+chooseProvider :: Facts f -> Provider f
 chooseProvider facts = case facts^.systemFacts.osRelease.distro of
                            Arch -> Provider A.provider
 
-provider :: Recipe Provider
-provider = undefined -- XXX: Get the provider from the Ctx
+getProvider :: Recipe f (Provider f)
+getProvider = chooseProvider <$> getFacts

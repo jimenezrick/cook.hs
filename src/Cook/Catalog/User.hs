@@ -8,7 +8,7 @@ import Data.List (intercalate)
 
 import Cook.Recipe
 
-addUser :: Bool -> [String] -> String -> Recipe ()
+addUser :: Bool -> [String] -> String -> Recipe f ()
 addUser createHome extraGroups user =
     let homeFlag   = if createHome then ["-m"] else []
         groupsFlag = if null extraGroups then [] else ["-G", intercalate "," extraGroups]
@@ -17,13 +17,13 @@ addUser createHome extraGroups user =
   where userAlreadyExists 9 = Just ()
         userAlreadyExists _ = Nothing
 
-delUser :: String -> Recipe ()
+delUser :: String -> Recipe f ()
 delUser user = withRecipeName "User.Delete" $ do
     withoutErrorWhen userDontExists $ runProc "userdel" ["-r", user]
   where userDontExists 6 = Just ()
         userDontExists _ = Nothing
 
-addGroup :: Bool -> String -> Recipe ()
+addGroup :: Bool -> String -> Recipe f ()
 addGroup isSystem group =
     let systemFlag   = if isSystem then ["--system"] else []
     in withRecipeName "Group.Add" $ do

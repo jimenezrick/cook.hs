@@ -4,8 +4,8 @@ module Cook.Catalog.Sudo (
 
 import Cook.Recipe
 
-enableSudoWheel :: Recipe ()
-enableSudoWheel = withRecipeName "Sudo.EnableSudoWheel" $ do
+enableSudoWheel :: Recipe f ()
+enableSudoWheel = withRecipeName "Sudo.EnableSudoWheel" $
     createFsTree "/etc/sudoers.d" tree
   where tree     = File "wheel-nopasswd" nopasswd (Just 0o440, Just ("root", "root"))
         nopasswd = Content "%wheel ALL=(ALL) NOPASSWD: ALL\n\

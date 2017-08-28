@@ -1,21 +1,23 @@
-module Cook.Catalog.IPFS (
-    requireIPFS
+module Cook.Catalog.Ipfs (
+    requireIpfs
   ) where
 
+import Control.Lens
 import Control.Monad
 
+import Cook.Provider
 import Cook.Recipe
-import Cook.Catalog.Arch.Pacman
 import Cook.Catalog.Systemd
 import Cook.Catalog.User
 
-requireIPFS :: Recipe ()
-requireIPFS = withRecipeName "IPFS.RequireIPFS" $ do
-    requirePackages ["go-ipfs"]
+requireIpfs :: Recipe f ()
+requireIpfs = withRecipeName "Ipfs.RequireIpfs" $ do
+    prov <- getProvider
+    prov^.pkgManager.requirePackages $ ["go-ipfs"]
     addUser True [] "ipfs"
     void $ withSudoUser "ipfs" $ do
         Just home <- getEnv "HOME"
-        withCd home $ do
+        withCd home $
             withoutError $ runProc "ipfs" ["init"]
     enableService "ipfs"
     startService "ipfs"

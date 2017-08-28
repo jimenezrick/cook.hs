@@ -5,26 +5,27 @@ module Cook.Catalog.Cjdns (
   , requireCjdcmd
   ) where
 
+import Control.Lens
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Aeson
-import Data.Aeson.Types
 import Data.Aeson.Lens
+import Data.Aeson.Types
 import Data.ByteString.Lazy (fromStrict)
 import Data.FileEmbed (embedFile)
+import Data.Maybe
 import Data.Text.Lazy (Text)
 import Data.Text.Lazy.Encoding (decodeUtf8)
-import Data.Maybe
 import GHC.Generics
 import System.FilePath.Find
 
 import qualified Data.HashMap.Strict as H
 import qualified Data.Text as T
 
+import Cook.Provider
 import Cook.Recipe
 import Cook.Recipe.Config
 import Cook.Recipe.Util
-import Cook.Catalog.Arch.Pacman
 import Cook.Catalog.Go
 
 data CjdnsOpts = CjdnsOpts
@@ -40,13 +41,14 @@ instance ToJSON CjdnsOpts
 
 instance FromJSON CjdnsOpts
 
-requireCjdns :: FilePath -> Recipe ()
+requireCjdns :: FilePath -> Recipe f ()
 requireCjdns optsPath = withRecipeName "Cjdns.RequireCjdns" $ do
-    requirePackages ["cjdns"]
+    prov <- getProvider
+    prov^.pkgManager.requirePackages $ ["cjdns"]
     opts <- loadConfig YAML optsPath
     setUpCjdns opts
 
-setUpCjdns :: CjdnsOpts -> Recipe ()
+setUpCjdns :: CjdnsOpts -> Recipe f ()
 setUpCjdns opts = withRecipeName "SetUpCjdns" $ do
     defConf <- generateConfig
     (peersIPv4, peersIPv6) <- getPeers
@@ -59,8 +61,8 @@ setUpCjdns opts = withRecipeName "SetUpCjdns" $ do
 
     -- To test conf generation: createFsTree "." $ File "cjdroute.conf" (Content conf) defAttrs
 
-getPeers :: Recipe (Value, Value)
-getPeers = withRecipeName "GetPeers" $ do
+getPeers :: Recipe f (Value, Value)
+getPeers = withRecipeName "GetPeers" $
     withTempDir $ \tmpDir -> do
         tarball <- getHTTP "https://github.com/hyperboria/peers/archive/master.tar.gz"
         void $ runInOutB tarball (proc "tar" ["xz", "--strip-components=1"])
@@ -75,12 +77,12 @@ getPeers = withRecipeName "GetPeers" $ do
         return (Object peersIPv4, Object peersIPv6)
   where isIPv6 a _ = T.head a == '['
 
-generateConfig :: Recipe Value
+generateConfig :: Recipe f Value
 generateConfig = withRecipeName "GenerateConfig" $ do
     conf <- runPipeOut [proc "cjdroute" ["--genconf"], proc "cjdroute" ["--cleanconf"]]
     readConfig JSON conf
 
-requireCjdcmd :: Recipe ()
+requireCjdcmd :: Recipe f ()
 requireCjdcmd = withRecipeName "Cjdns.RequireCjdcmd" $ do
     goGet "github.com/fc00/cjdcmd-ng"
     createFsTree "/root" $ File ".cjdnsadmin" (Content cjdcmdConf) defAttrs

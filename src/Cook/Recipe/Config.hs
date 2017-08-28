@@ -27,12 +27,12 @@ import Cook.Recipe
 
 data ConfigType = JSON | YAML
 
-loadConfig :: FromJSON a => ConfigType -> FilePath -> Recipe a
+loadConfig :: FromJSON a => ConfigType -> FilePath -> Recipe f a
 loadConfig typ path = catchException $ do
     conf <- liftIO $ B.readFile path
     readConfig typ $ T.decodeUtf8 conf
 
-readConfig :: FromJSON a => ConfigType -> Text -> Recipe a
+readConfig :: FromJSON a => ConfigType -> Text -> Recipe f a
 readConfig typ conf =
     case decode typ (T.encodeUtf8 conf) of
         Left err  -> failWith err
@@ -40,7 +40,7 @@ readConfig typ conf =
   where decode JSON = A.eitherDecode
         decode YAML = Y.decodeEither . B.toStrict
 
-writeConfig :: ToJSON a => ConfigType -> a -> Recipe Text
+writeConfig :: ToJSON a => ConfigType -> a -> Recipe f Text
 writeConfig typ conf = return . T.decodeUtf8 $ encode typ conf
   where encode JSON = A.encodePretty' prettyJSON
         encode YAML = B.fromStrict . Y.encodePretty prettyYAML

@@ -22,6 +22,7 @@ library
                      , DisambiguateRecordFields
                      , DeriveDataTypeable
                      , DeriveGeneric
+                     , StandaloneDeriving
                      , ScopedTypeVariables
                      , RankNTypes
                      , GADTs
@@ -37,9 +38,9 @@ library
                      , Cook.Catalog.Debian.Apt
                      , Cook.Catalog.Git
                      , Cook.Catalog.Go
-                     , Cook.Catalog.IPFS
+                     , Cook.Catalog.Ipfs
                      , Cook.Catalog.Rkt
-                     , Cook.Catalog.SSH
+                     , Cook.Catalog.Ssh
                      , Cook.Catalog.Sudo
                      , Cook.Catalog.Systemd
                      , Cook.Catalog.Systemd.Container

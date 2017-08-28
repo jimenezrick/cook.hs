@@ -1,4 +1,4 @@
-module Cook.Catalog.SSH (
+module Cook.Catalog.Ssh (
     copyId
   , authorizeKey
   , copyFile
@@ -9,12 +9,12 @@ import Text.Printf
 
 import Cook.Recipe
 
-copyId :: String -> String -> Recipe ()
-copyId user host = withRecipeName "SSH.CopyId" $ runProc "ssh-copy-id" [target]
+copyId :: String -> String -> Recipe f ()
+copyId user host = withRecipeName "Ssh.CopyId" $ runProc "ssh-copy-id" [target]
   where target = printf "%s@%s" user host
 
-authorizeKey :: FilePath -> String -> Recipe ()
-authorizeKey pubKeyPath user = withRecipeName "SSH.AuthorizeKey" $ do
+authorizeKey :: FilePath -> String -> Recipe f ()
+authorizeKey pubKeyPath user = withRecipeName "Ssh.AuthorizeKey" $ do
     createFsTree home tree
   where tree = Dir ".ssh" (Just 0o700, Just (user, user)) [
                    File "authorized_keys" key (Just 0o600, Just (user, user))
@@ -22,5 +22,5 @@ authorizeKey pubKeyPath user = withRecipeName "SSH.AuthorizeKey" $ do
         key  = Copy pubKeyPath
         home = "/home" </> user
 
-copyFile :: String -> String -> FilePath -> FilePath -> Recipe()
+copyFile :: String -> String -> FilePath -> FilePath -> Recipe f ()
 copyFile user host src dst = runProc "scp" [src, printf "%s@%s:%s" user host dst]
