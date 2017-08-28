@@ -1,5 +1,13 @@
 module Cook.Facts
-    ( Facts
+    ( Distro (..)
+    , Facts
+    , distro
+    , release
+    , osRelease
+    , currentTime
+    , systemFacts
+    , customFacts
+
     , grabFacts
     , grabOnlySystemFacts
     , grabSystemFacts
@@ -7,6 +15,7 @@ module Cook.Facts
     ) where
 
 import Control.Error
+import Control.Lens
 import Control.Monad.Except (throwError)
 import Data.Text (Text)
 import Data.Time (UTCTime, getCurrentTime)
@@ -39,6 +48,10 @@ data Facts a = Facts
     { _systemFacts :: SystemFacts
     , _customFacts :: a
     } deriving Show
+
+makeLenses ''OsRelease
+makeLenses ''SystemFacts
+makeLenses ''Facts
 
 grabFacts :: IO a -> IO (Facts a)
 grabFacts grabCustom = runScript $ Facts <$> grabSystemFacts <*> scriptIO grabCustom

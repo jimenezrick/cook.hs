@@ -45,6 +45,7 @@ library
                      , Cook.Catalog.Systemd.Container
                      , Cook.Catalog.User
                      , Cook.Facts
+                     , Cook.Provider
                      , Cook.Provider.PkgManager
   build-depends:       base >=4.8 && <5
                      , bytestring

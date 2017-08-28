@@ -1,1 +1,4 @@
 - Use for config: https://hackage.haskell.org/package/dhall
+- Mirar la rama: ssh
+- Pasar Provider en el Ctx
+- Usar: https://hackage.haskell.org/package/safe-exceptions ?
