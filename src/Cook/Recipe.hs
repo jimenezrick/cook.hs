@@ -44,6 +44,7 @@ module Cook.Recipe (
   , printRecipeFailure
   , failWith
   , catchException
+  , recipeIO
 
   , FT.FsTree (..)
   , FT.Content (..)
@@ -166,11 +167,11 @@ procEnv = do
     case env of
         Nothing   -> return Nothing
         Just env' -> do
-            penv <- liftIO getEnvironment
+            penv <- recipeIO getEnvironment
             return . Just . M.toList . M.fromList $ (penv ++ env')
 
 createFsTree :: FilePath -> FT.FsTree -> Recipe f ()
-createFsTree base fstree = catchException . liftIO $ FT.createFsTree base fstree
+createFsTree base fstree = recipeIO $ FT.createFsTree base fstree
 
 proc :: FilePath -> [String] -> Step
 proc = Proc
@@ -199,7 +200,7 @@ withCtx f recipe = do
         ctx' <- get
         let conf = ctxRecipeConf ctx'
         when (recipeConfDebug conf) $
-            liftIO $ hPrintf stderr "Cook: using %s\n" (show ctx')
+            recipeIO $ hPrintf stderr "Cook: using %s\n" (show ctx')
         a <- recipe
         trace <- gets ctxTrace
         return (trace, a)
@@ -212,9 +213,9 @@ withRecipeName name recipe = withCtx (\ctx@Ctx {..} -> ctx { ctxRecipeNames = ad
     let conf = ctxRecipeConf ctx
     case showCtxRecipeName ctx of
         Just recipeName
-          | recipeConfVerbose conf -> liftIO $ hPrintf stderr "Cook: in %s\n" recipeName
+          | recipeConfVerbose conf -> recipeIO $ hPrintf stderr "Cook: in %s\n" recipeName
         _                          -> return ()
-    recipe
+    catchException recipe
   where up ""     = ""
         up (n:ns) = toUpper n : ns
         casedName = intercalate "." . map up $ splitOn "." name
@@ -275,8 +276,8 @@ getCwd :: Recipe f FilePath
 getCwd = do
     d <- gets ctxCwd
     case d of
-        Nothing  -> liftIO getCurrentDirectory
-        Just dir -> liftIO $ canonicalizePath dir
+        Nothing  -> recipeIO getCurrentDirectory
+        Just dir -> recipeIO $ canonicalizePath dir
 
 traceResult :: Result -> Recipe f ()
 traceResult result = do
@@ -325,16 +326,16 @@ run' ioredir step = do
 
     (exit, outErr) <- case ioredir of
         Nothing -> do
-            exit <- liftIO $ P.runProcess pCfg
+            exit <- recipeIO $ P.runProcess pCfg
             return (exit, Nothing)
         Just (In bin) -> do
-            exit <- liftIO . P.runProcess $ setStdin bin pCfg
+            exit <- recipeIO . P.runProcess $ setStdin bin pCfg
             return (exit, Nothing)
         Just (InOut bin) -> do
-            (exit, out, err) <- liftIO . P.readProcess $ setStdin bin pCfg
+            (exit, out, err) <- recipeIO . P.readProcess $ setStdin bin pCfg
             return (exit, Just (out, err))
         Just Out -> do
-            (exit, out, err) <- liftIO $ P.readProcess pCfg
+            (exit, out, err) <- recipeIO $ P.readProcess pCfg
             return (exit, Just (out, err))
     case exit of
         ExitFailure code -> traceResult (StepFailed step code) >> abortRecipe
@@ -368,25 +369,25 @@ runOut step = (T.decodeUtf8 *** T.decodeUtf8) <$> runOutB step
 runInOut :: Text -> Step -> Recipe f (Text, Text)
 runInOut tin step = (T.decodeUtf8 *** T.decodeUtf8) . fromJust <$> run' (Just . In $ T.encodeUtf8 tin) step
 
-runRecipe :: Recipe () a -> IO a
+runRecipe :: Recipe () a -> IO ()
 runRecipe recipe = do
     conf <- defRecipeConf
     runRecipeConf conf recipe
 
-runRecipeFacts :: F.Facts () -> Recipe () a -> IO a
+runRecipeFacts :: F.Facts () -> Recipe () a -> IO ()
 runRecipeFacts facts recipe = do
     conf <- defRecipeConf
     runRecipeConf conf { recipeConfFacts = facts } recipe
 
-runRecipeConf :: RecipeConf f -> Recipe f a -> IO a
+runRecipeConf :: RecipeConf f -> Recipe f a -> IO ()
 runRecipeConf conf recipe = do
     when (recipeConfVerbose conf) $
         hPrintf stderr "Cook: running with %s\n" (show conf)
     r <- runRecipeConfEither conf recipe
     case r of
-        Left failure                     -> printRecipeFailure conf failure >> undefined
-        Right a | recipeConfVerbose conf -> hPutStrLn stderr "Cook: recipe successful" >> return a
-                | otherwise              -> return a
+        Left failure                     -> printRecipeFailure conf failure
+        Right _ | recipeConfVerbose conf -> hPutStrLn stderr "Cook: recipe successful"
+                | otherwise              -> return ()
 
 runRecipeConfEither :: RecipeConf f -> Recipe f a -> IO (Either (RecipeFailTrace f) a)
 runRecipeConfEither conf@(RecipeConf {..}) recipe =
@@ -411,7 +412,7 @@ printRecipeFailure conf trace@((result, ctx'):|_) = do
     hPrintf stderr "      using %s\n" (show ctx' { ctxTrace = [] })
 
 runPipe :: NonEmpty Step -> Recipe f ()
-runPipe pipe = runPipeOut pipe >>= liftIO . T.putStr
+runPipe pipe = runPipeOut pipe >>= recipeIO . T.putStr
 
 runPipeOut :: NonEmpty Step -> Recipe f Text
 runPipeOut = runPipeInOut T.empty
@@ -443,4 +444,7 @@ showCtxRecipeName Ctx { ctxRecipeNames = [] } = Nothing
 showCtxRecipeName Ctx { ctxRecipeNames = ns } = Just $ intercalate "." $ reverse ns
 
 getEnv :: String -> Recipe f (Maybe String)
-getEnv = liftIO . lookupEnv
+getEnv = recipeIO . lookupEnv
+
+recipeIO :: IO a -> Recipe f a
+recipeIO = catchException . liftIO

@@ -5,7 +5,6 @@ module Cook.Recipe.Util (
   , mapFileContent
   ) where
 
-import Control.Monad.IO.Class
 import Data.ByteString.Lazy (ByteString)
 import Data.Text (Text)
 import Data.Text.Lazy (unpack)
@@ -16,7 +15,7 @@ import qualified Data.Text.IO as T
 import Cook.Recipe
 
 withTempDir :: (FilePath -> Recipe f a) -> Recipe f a
-withTempDir recipe = withRecipeName "Util.WithTempDir" $ catchException $ do
+withTempDir recipe = withRecipeName "Util.WithTempDir" $ do
     (tmpDir, _) <- runOut $ proc "mktemp" ["--tmpdir", "--directory", "cook-XXXXXX"]
     let tmpDir' = head . lines $ unpack tmpDir
     a <- withCd tmpDir' $ recipe tmpDir'
@@ -24,16 +23,16 @@ withTempDir recipe = withRecipeName "Util.WithTempDir" $ catchException $ do
     return a
 
 getHTTP :: String -> Recipe f ByteString
-getHTTP url = withRecipeName "Util.GetHTTP" $ catchException $ do
+getHTTP url = withRecipeName "Util.GetHTTP" $ do
     req <- parseRequest url
     res <- httpLBS req
     return $ getResponseBody res
 
 withFileContent :: FilePath -> Recipe f Text
-withFileContent path = withRecipeName "Util.WithFileContent" $ catchException $ do
-    liftIO $ T.readFile path
+withFileContent path = withRecipeName "Util.WithFileContent" $
+    recipeIO $ T.readFile path
 
 mapFileContent :: FilePath -> (Text -> Text) -> Recipe f ()
-mapFileContent path f = withRecipeName "Util.MapFileContent" $ catchException $ do
-    content <- liftIO $ T.readFile path
-    liftIO . T.writeFile path $ f content
+mapFileContent path f = withRecipeName "Util.MapFileContent" $ do
+    content <- recipeIO $ T.readFile path
+    recipeIO . T.writeFile path $ f content

@@ -2,7 +2,6 @@ module Cook.Catalog.Arch.Rootfs (
     buildRootfs
   ) where
 
-import Control.Monad.IO.Class
 import System.Directory
 import System.FilePath
 
@@ -13,7 +12,7 @@ import Cook.Recipe.Util
 
 buildRootfs :: FilePath -> [String] -> Recipe f FilePath
 buildRootfs path extraPkgs = withRecipeName "Arch.Rootfs.BuildRootfs" $ do
-    liftIO $ createDirectory path
+    recipeIO $ createDirectory path
     runProc "pacstrap" $ ["-i", "-c", "-d", path, "base"] ++ extraPkgs ++ ["--ignore", "linux"]
     enablePts0 $ path </> "etc/securetty"
     return path

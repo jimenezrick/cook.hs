@@ -9,7 +9,6 @@ module Cook.Recipe.Config (
   ) where
 
 import Control.Lens
-import Control.Monad.IO.Class
 import Data.Aeson (FromJSON, ToJSON, Value (..))
 import Data.Aeson.Lens
 import Data.Text.Lazy (Text)
@@ -28,8 +27,8 @@ import Cook.Recipe
 data ConfigType = JSON | YAML
 
 loadConfig :: FromJSON a => ConfigType -> FilePath -> Recipe f a
-loadConfig typ path = catchException $ do
-    conf <- liftIO $ B.readFile path
+loadConfig typ path = do
+    conf <- recipeIO $ B.readFile path
     readConfig typ $ T.decodeUtf8 conf
 
 readConfig :: FromJSON a => ConfigType -> Text -> Recipe f a

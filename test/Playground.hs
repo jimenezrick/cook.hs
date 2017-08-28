@@ -1,27 +1,29 @@
-import Control.Monad.IO.Class (liftIO)
-
-import Cook.Recipe
 import Cook.Facts
+import Cook.Recipe
+import Cook.Recipe.Util
 import Cook.Catalog.Cjdns
 
 main :: IO ()
 main = do
-    grabFacts (return ()) >>= print
     {-testSsh-}
-    {-testError-}
+    testError
 
 testCjdns :: IO ()
-testCjdns = runRecipe $ do
+testCjdns = runRecipe $
     requireCjdns "conf/cjdns/node.yaml"
 
 testSsh :: IO ()
-testSsh = runRecipe $ do
-    withSshUser "root" "51.15.58.63" $ do
+testSsh = runRecipe $
+    withSshUser "root" "51.15.58.63" $
         runProc0 "uptime"
 
 testError :: IO ()
 testError = runRecipe $ do
-    withRecipeName "foo.bar.xxx.in" $ do
-        withRecipeName "foo.bar.here" $ do
-            withRecipeName "foo.bar.yyy.there" $ do
+    runProc0 "uptime"
+    runProc0 "true"
+    --getHTTP "foo"
+
+    withRecipeName "foo.bar.xxx.in" $
+        withRecipeName "foo.bar.here" $
+            withRecipeName "foo.bar.yyy.there" $
                 failWith "WTF"

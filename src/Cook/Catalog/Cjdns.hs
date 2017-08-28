@@ -7,7 +7,6 @@ module Cook.Catalog.Cjdns (
 
 import Control.Lens
 import Control.Monad
-import Control.Monad.IO.Class
 import Data.Aeson
 import Data.Aeson.Lens
 import Data.Aeson.Types
@@ -66,10 +65,10 @@ getPeers = withRecipeName "GetPeers" $
     withTempDir $ \tmpDir -> do
         tarball <- getHTTP "https://github.com/hyperboria/peers/archive/master.tar.gz"
         void $ runInOutB tarball (proc "tar" ["xz", "--strip-components=1"])
-        peerFiles <- liftIO $ find always (extension ==? ".k") tmpDir
+        peerFiles <- recipeIO $ find always (extension ==? ".k") tmpDir
 
-        liftIO $ putStrLn "Loading public peers:"
-        liftIO $ forM_ peerFiles putStrLn
+        recipeIO $ putStrLn "Loading public peers:"
+        recipeIO $ forM_ peerFiles putStrLn
 
         Object peers <- foldl mergeConfig emptyObject . catMaybes <$> mapM (loadConfig JSON) peerFiles
         let peersIPv6 = H.filterWithKey isIPv6 peers
