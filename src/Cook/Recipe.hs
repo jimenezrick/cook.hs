@@ -58,7 +58,7 @@ module Cook.Recipe (
   ) where
 
 import Control.Arrow
-import Control.Exception.Lifted
+import Control.Exception.Safe (SyncExceptionWrapper, handle)
 import Control.Monad.Except
 import Control.Monad.Morph
 import Control.Monad.State
@@ -191,7 +191,7 @@ abortRecipe :: Recipe f a
 abortRecipe = gets ctxTrace >>= throwError . NE.fromList
 
 catchException :: Recipe f a -> Recipe f a
-catchException = handle (\e -> failWith $ show (e :: SomeException))
+catchException = handle (\e -> failWith $ show (e :: SyncExceptionWrapper))
 
 withCtx :: (Ctx f -> Ctx f) -> Recipe f a -> Recipe f a
 withCtx f recipe = do

@@ -14,11 +14,11 @@ module Cook.Facts
     , grabOsRelease
     ) where
 
-import Control.Error
+import Control.Exception.Safe (throwString)
 import Control.Lens
-import Control.Monad.Except (throwError)
 import Data.Text (Text)
 import Data.Time (UTCTime, getCurrentTime)
+import Data.Maybe (mapMaybe)
 
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
@@ -27,7 +27,6 @@ import qualified Data.Text.IO as T
 --
 -- TODO: Add support for custom facts in SSH execution mode
 --
-
 data Distro = Arch | Debian | Ubuntu | CentOS deriving Show
 
 lookupDistro :: Text -> Maybe Distro
@@ -67,17 +66,17 @@ customFacts :: Lens' (Facts f) f
 customFacts g (Facts system custom) = fmap (\custom' -> Facts system custom') (g custom)
 
 grabFacts :: Show a => IO a -> IO (Facts a)
-grabFacts grabCustom = runScript $ Facts <$> grabSystemFacts <*> scriptIO grabCustom
+grabFacts grabCustom = Facts <$> grabSystemFacts <*> grabCustom
 
 grabOnlySystemFacts :: IO (Facts ())
 grabOnlySystemFacts = grabFacts $ return ()
 
-grabSystemFacts :: Script SystemFacts
-grabSystemFacts = SystemFacts <$> grabOsRelease <*> scriptIO getCurrentTime
+grabSystemFacts :: IO SystemFacts
+grabSystemFacts = SystemFacts <$> grabOsRelease <*> getCurrentTime
 
-grabOsRelease :: Script OsRelease
+grabOsRelease :: IO OsRelease
 grabOsRelease = do
-    info <- scriptIO $ T.readFile "/etc/os-release"
+    info <- T.readFile "/etc/os-release"
     let kv = M.fromList . mapMaybe (takeKV . T.splitOn "=") . drop 1 $ T.lines info
         os = do
             let rel = T.dropAround (== '"') <$> M.lookup "VERSION_ID" kv
@@ -85,6 +84,6 @@ grabOsRelease = do
             return (dis, rel)
     case os of
         Just (dis, rel) -> return $ OsRelease dis rel
-        Nothing -> throwError "Couldn't parse facts from: /etc/os-release"
+        Nothing -> throwString "Couldn't parse facts from: /etc/os-release"
   where takeKV [k, v] = Just (T.dropWhileEnd (== ':') k, v)
         takeKV _      = Nothing
