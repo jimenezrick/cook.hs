@@ -58,7 +58,7 @@ module Cook.Recipe (
   ) where
 
 import Control.Arrow
-import Control.Exception.Safe (SyncExceptionWrapper, handle)
+import Control.Exception.Safe (MonadThrow, MonadCatch, SyncExceptionWrapper, handle)
 import Control.Monad.Except
 import Control.Monad.Morph
 import Control.Monad.State
@@ -125,7 +125,9 @@ deriving instance Show (Ctx f)
 
 type RecipeFailTrace f = NonEmpty (TraceStep f)
 
-type Recipe f = ExceptT (RecipeFailTrace f) (StateT (Ctx f) IO)
+newtype SafeIO a = SafeIO { getIO :: IO a } deriving (Functor, Applicative, Monad, MonadThrow, MonadCatch)
+
+type Recipe f = ExceptT (RecipeFailTrace f) (StateT (Ctx f) SafeIO)
 
 data Step = Proc FilePath [String]
           | Shell String
@@ -215,7 +217,7 @@ withRecipeName name recipe = withCtx (\ctx@Ctx {..} -> ctx { ctxRecipeNames = ad
         Just recipeName
           | recipeConfVerbose conf -> recipeIO $ hPrintf stderr "Cook: in %s\n" recipeName
         _                          -> return ()
-    catchException recipe
+    recipe
   where up ""     = ""
         up (n:ns) = toUpper n : ns
         casedName = intercalate "." . map up $ splitOn "." name
@@ -400,7 +402,7 @@ runRecipeConfEither conf@(RecipeConf {..}) recipe =
       , ctxSudo        = ExecNormal
       , ctxRecipeConf  = conf
       }
-    in flip evalStateT ctx $ runExceptT recipe
+    in getIO . flip evalStateT ctx $ runExceptT recipe
 
 printRecipeFailure :: RecipeConf f -> RecipeFailTrace f -> IO ()
 printRecipeFailure conf trace@((result, ctx'):|_) = do
@@ -447,4 +449,4 @@ getEnv :: String -> Recipe f (Maybe String)
 getEnv = recipeIO . lookupEnv
 
 recipeIO :: IO a -> Recipe f a
-recipeIO = catchException . liftIO
+recipeIO = catchException . lift . lift . SafeIO

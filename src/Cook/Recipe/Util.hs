@@ -24,8 +24,8 @@ withTempDir recipe = withRecipeName "Util.WithTempDir" $ do
 
 getHTTP :: String -> Recipe f ByteString
 getHTTP url = withRecipeName "Util.GetHTTP" $ do
-    req <- parseRequest url
-    res <- httpLBS req
+    req <- recipeIO $ parseRequest url
+    res <- recipeIO $ httpLBS req
     return $ getResponseBody res
 
 withFileContent :: FilePath -> Recipe f Text

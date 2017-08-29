@@ -22,6 +22,7 @@ library
                      , DisambiguateRecordFields
                      , DeriveDataTypeable
                      , DeriveGeneric
+                     , GeneralizedNewtypeDeriving
                      , StandaloneDeriving
                      , ScopedTypeVariables
                      , RankNTypes
