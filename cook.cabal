@@ -75,6 +75,7 @@ library
                      , safe
                      , time
                      , safe-exceptions
+                     , pretty-simple
 
 executable cook-contain
   ghc-options:         -Wall

@@ -76,6 +76,7 @@ import System.Exit
 import System.FilePath
 import System.IO
 import Text.Printf
+import Text.Pretty.Simple (pShowNoColor)
 
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
@@ -201,7 +202,7 @@ withCtx f recipe = do
         ctx' <- get
         let conf = ctxRecipeConf ctx'
         when (recipeConfDebug conf) $
-            recipeIO $ hPrintf stderr "Cook: using %s\n" (show ctx')
+            recipeIO $ hPrintf stderr "Cook: using %s\n" (pShowNoColor ctx')
         a <- recipe
         trace <- gets ctxTrace
         return (trace, a)
@@ -377,7 +378,7 @@ runRecipeFacts facts recipe = do
 runRecipeConf :: RecipeConf f -> Recipe f a -> IO ()
 runRecipeConf conf recipe = do
     when (recipeConfVerbose conf) $
-        hPrintf stderr "Cook: running with %s\n" (show conf)
+        hPrintf stderr "Cook: running with %s\n" (pShowNoColor conf)
     r <- runRecipeConfEither conf recipe
     case r of
         Left failure                     -> printRecipeFailure conf failure
@@ -404,7 +405,7 @@ printRecipeFailure conf trace@((result, ctx'):|_) = do
         StepSucceeded _   -> error "Recipe.runRecipeConf: invalid pattern"
         StepFailed _ code -> hPrintf stderr "Cook: process exited with code %d\n" code
         Failure msg       -> hPrintf stderr "Cook: step failed because: %s\n" msg
-    hPrintf stderr "      using %s\n" (show ctx' { ctxTrace = [] })
+    hPrintf stderr "      using %s\n" (pShowNoColor ctx' { ctxTrace = [] })
 
 runPipe :: NonEmpty Step -> Recipe f ()
 runPipe pipe = runPipeOut pipe >>= recipeIO . T.putStr
@@ -432,7 +433,14 @@ printRecipeTrace n (failed@(_, ctx):|prev) = do
     mapM_ (hPutStrLn stderr . ("  " ++) . fmt) $ reverse $ take n prev
     hPutStrLn stderr $ "> " ++ fmt failed
   where fmt (step, ctx') = let names = maybe "" (++ " ") (showCtxRecipeName ctx')
-                           in printf "%s (%sfrom %s)" (show step) names (fromJust $ ctxCwd ctx')
+                           in printf "%s (%sfrom %s%s%s)" (show step) names (fromJust $ ctxCwd ctx') (fmtPriv ctx') (fmtMode ctx')
+        fmtPriv ctx' = case ctxPriv ctx' of
+                           ExecNormal           -> ""
+                           ExecSudo (Just user) -> printf " as sudo:%s" user :: String
+                           ExecSudo Nothing     -> printf " as sudo" :: String
+        fmtMode ctx' = case ctxMode ctx' of
+                           ExecLocal         -> ""
+                           ExecSsh user host -> printf " in ssh:%s@%s" user host :: String
 
 showCtxRecipeName :: Ctx f -> Maybe String
 showCtxRecipeName Ctx { ctxRecipeNames = [] } = Nothing

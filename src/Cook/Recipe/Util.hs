@@ -40,6 +40,8 @@ mapFileContent path f = withRecipeName "Util.MapFileContent" $ do
     recipeIO . T.writeFile path $ f content
 
 execCwd :: Step -> Recipe f ()
-execCwd (Proc prog args) = withRecipeName "Util.ExecCwd" $
-    runInB (fromStrict execcwd) $ proc "sh" $ ["-s", prog] ++ args
+execCwd (Proc prog args) = withRecipeName "Util.ExecCwd" $ do
+    -- FIXME: Not supported for Shell
+    cwd <- getCwd
+    runInB (fromStrict execcwd) $ proc "sh" $ ["-s", cwd, prog] ++ args
   where execcwd = $(embedFile "execcwd.sh")
