@@ -3,6 +3,7 @@ module Cook.Recipe.Util (
   , getHTTP
   , withFileContent
   , mapFileContent
+  , mapFileLines
   , execCwd
   ) where
 
@@ -12,6 +13,7 @@ import Data.Text (Text)
 import Data.Text.Lazy (unpack)
 import Network.HTTP.Simple
 
+import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
 import Cook.Recipe
@@ -38,6 +40,10 @@ mapFileContent :: FilePath -> (Text -> Text) -> Recipe f ()
 mapFileContent path f = withRecipeName "Util.MapFileContent" $ do
     content <- recipeIO $ T.readFile path
     recipeIO . T.writeFile path $ f content
+
+mapFileLines :: FilePath -> ([Text] -> [Text]) -> Recipe f ()
+mapFileLines path f = withRecipeName "Util.MapFileLines" $
+    mapFileContent path $ T.unlines . f . T.lines
 
 execCwd :: Step -> Recipe f ()
 execCwd (Proc prog args) = withRecipeName "Util.ExecCwd" $ do
