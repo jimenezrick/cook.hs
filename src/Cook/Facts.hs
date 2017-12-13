@@ -24,14 +24,13 @@ import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
-data Distro = Arch | Debian | Ubuntu | CentOS deriving Show
+data Distro = Arch | Debian | Ubuntu deriving Show
 
 lookupDistro :: Text -> Maybe Distro
 lookupDistro name = M.lookup name distros
   where distros = [ ("arch", Arch)
                   , ("debian", Debian)
                   , ("ubuntu", Ubuntu)
-                  , ("centos", CentOS)
                   ]
 
 data OsRelease = OsRelease
