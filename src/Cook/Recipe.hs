@@ -1,5 +1,5 @@
-module Cook.Recipe (
-    Recipe
+module Cook.Recipe
+  ( Recipe
   , RecipeConf (..)
   , Step (..)
 

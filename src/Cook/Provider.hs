@@ -10,7 +10,7 @@ module Cook.Provider
 import Control.Lens
 
 import Cook.Provider.PkgManager hiding (Provider)
-import Cook.Recipe
+import Cook.Recipe (Recipe, getFacts)
 import Cook.Facts
 
 import qualified Cook.Catalog.Arch.Pacman as A
