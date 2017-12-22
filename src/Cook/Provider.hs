@@ -1,7 +1,5 @@
 module Cook.Provider
-    ( module Cook.Provider.PkgManager
-
-    , Provider
+    ( Provider
     , pkgManager
 
     , getProvider

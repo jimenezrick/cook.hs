@@ -5,7 +5,6 @@ module Cook.Catalog.Cjdns (
   , requireCjdcmd
   ) where
 
-import Control.Lens
 import Control.Monad
 import Data.Aeson
 import Data.Aeson.Lens
@@ -21,8 +20,8 @@ import System.FilePath.Find
 import qualified Data.HashMap.Strict as H
 import qualified Data.Text as T
 
-import Cook.Provider
 import Cook.Recipe
+import Cook.Recipe.PkgManager
 import Cook.Recipe.Config
 import Cook.Recipe.Util
 import Cook.Catalog.Go
@@ -42,8 +41,7 @@ instance FromJSON CjdnsOpts
 
 requireCjdns :: FilePath -> Recipe f ()
 requireCjdns optsPath = withRecipeName "Cjdns.RequireCjdns" $ do
-    prov <- getProvider
-    prov^.pkgManager.requirePackages $ ["cjdns"]
+    requirePackages ["cjdns"]
     opts <- loadConfig YAML optsPath
     setUpCjdns opts
 

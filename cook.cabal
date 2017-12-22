@@ -31,6 +31,7 @@ library
   exposed-modules:     Cook.Recipe
                      , Cook.Recipe.Config
                      , Cook.Recipe.FsTree
+                     , Cook.Recipe.PkgManager
                      , Cook.Recipe.Template
                      , Cook.Recipe.Util
                      , Cook.Catalog.Arch.Pacman
