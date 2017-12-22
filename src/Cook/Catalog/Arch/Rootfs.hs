@@ -5,8 +5,6 @@ module Cook.Catalog.Arch.Rootfs (
 import System.Directory
 import System.FilePath
 
-import qualified Data.Text as T
-
 import Cook.Recipe
 import Cook.Recipe.Util
 

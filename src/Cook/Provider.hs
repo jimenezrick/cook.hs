@@ -7,7 +7,6 @@ module Cook.Provider
 
 import Control.Lens
 
-import Cook.Provider.PkgManager hiding (Provider)
 import Cook.Recipe (Recipe, getFacts)
 import Cook.Facts
 

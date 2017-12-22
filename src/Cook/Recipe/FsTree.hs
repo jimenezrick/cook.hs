@@ -7,17 +7,17 @@ module Cook.Recipe.FsTree (
   ) where
 
 import Data.Aeson
-import Data.ByteString.Lazy (ByteString)
+import Data.ByteString (ByteString)
 import Data.Default
 import Data.Foldable
-import Data.Text.Lazy (Text)
+import Data.Text (Text)
 import System.Directory
 import System.FilePath
 import System.Posix.Files
 import System.Posix.Types
 import System.Posix.User
 
-import qualified Data.Text.Lazy.IO as T
+import qualified Data.Text.IO as T
 
 import Cook.Recipe.Template
 
