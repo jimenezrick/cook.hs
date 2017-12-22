@@ -36,7 +36,6 @@ library
                      , Cook.Recipe.Util
                      , Cook.Catalog.Arch.Pacman
                      , Cook.Catalog.Arch.Rootfs
-                     , Cook.Catalog.Cjdns
                      , Cook.Catalog.Debian.Apt
                      , Cook.Catalog.Git
                      , Cook.Catalog.Go
