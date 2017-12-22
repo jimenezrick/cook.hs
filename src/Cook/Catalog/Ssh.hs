@@ -5,12 +5,12 @@ module Cook.Catalog.Ssh
   , copyFile
   ) where
 
-import Data.ByteString.Lazy (ByteString)
+import Data.ByteString (ByteString)
 import System.FilePath
 import Text.Printf
 
-import qualified Data.ByteString.Lazy as B
-import qualified Data.Text.Lazy.Encoding as T
+import qualified Data.ByteString as B
+import qualified Data.Text.Encoding as T
 
 import Cook.Recipe
 
