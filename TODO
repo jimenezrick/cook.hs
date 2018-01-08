@@ -1,1 +1,7 @@
 - Use for config: https://hackage.haskell.org/package/dhall
+- Shake for dependency control?
+    require (depends on upgrade and clean at the end)
+- Async ssh command framework
+
+- runProc that captures outpout and displays it only on error
+- withRoot (sudo if not root)
