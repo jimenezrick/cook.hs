@@ -22,7 +22,7 @@ authorizeKey :: ByteString -> String -> Recipe f ()
 authorizeKey pubKey user = withRecipeName "Ssh.AuthorizeKey" $
     createFsTree home tree
   where tree = Dir ".ssh" (Just 0o700, Just (user, user)) [
-                   File "authorized_keys" key (Just 0o600, Just (user, user))
+                   File "authorized_keys" key (Just 0o644, Just (user, user))
                ]
         key  = Content $ T.decodeUtf8 pubKey
         home = case user of
