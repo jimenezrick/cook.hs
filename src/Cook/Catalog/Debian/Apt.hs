@@ -5,20 +5,23 @@ module Cook.Catalog.Debian.Apt (
   , provider
   ) where
 
-import Data.List.NonEmpty
+import Data.List (last)
+import Data.List.NonEmpty hiding (last)
 import Data.Semigroup
 
 import Cook.Recipe
 import Cook.Provider.PkgManager (Provider)
 
+import qualified Data.Text.Lazy as T
+
 import qualified Cook.Provider.PkgManager as P
 
 aptGet :: NonEmpty String -> Recipe f ()
-aptGet args = withEnv [("DEBIAN_FRONTEND", "noninteractive")] $ do
+aptGet args = withEnv [("DEBIAN_FRONTEND", "noninteractive")] $
     run $ proc "apt-get" $ toList $ ["--quiet", "--yes"] <> args
 
 installPackages :: NonEmpty String -> Recipe f ()
-installPackages pkgs = withRecipeName "Debian.Apt.InstallPackages" $ do
+installPackages pkgs = withRecipeName "Debian.Apt.InstallPackages" $
     aptGet $ "install" <| pkgs
 
 upgradePackages :: Recipe f ()
@@ -29,8 +32,10 @@ upgradePackages = withRecipeName "Debian.Apt.UpgradePackages" $ do
 isPackageInstalled :: String -> Recipe f Bool
 isPackageInstalled ""  = error "Debian.isPackageInstalled: empty package name"
 isPackageInstalled pkg = withRecipeName "IsPackageInstalled" $ do
-    err <- withoutError $ runOut $ proc "dpkg" ["-l", pkg]
-    either (const $ return False) (const $ return True) err
+    res <- withoutError $ runOut $ proc "dpkg" ["-l", pkg]
+    case res of
+        Left _         -> return False
+        Right (out, _) -> return . T.isPrefixOf "ii" . last $ T.lines out
 
 clearPackagesCache :: Recipe f ()
 clearPackagesCache = withRecipeName "Debian.Apt.ClearPackagesCache" $ do
