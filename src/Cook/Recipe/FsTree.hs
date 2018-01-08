@@ -8,7 +8,7 @@ module Cook.Recipe.FsTree (
 
 import Data.Aeson
 import Data.ByteString (ByteString)
-import Data.Default
+import Data.Default.Class
 import Data.Foldable
 import Data.Text (Text)
 import System.Directory

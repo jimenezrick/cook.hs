@@ -12,7 +12,7 @@ import Cook.Catalog.User
 requireIpfs :: Recipe f ()
 requireIpfs = withRecipeName "Ipfs.RequireIpfs" $ do
     requirePackages ["go-ipfs"]
-    addUser True [] "ipfs"
+    addUser def "ipfs"
     void $ withSudoUser "ipfs" $ do
         Just home <- getEnv "HOME"
         withCd home $
