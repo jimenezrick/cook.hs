@@ -35,9 +35,10 @@ module Cook.Recipe
   , withSudoUser
 
   , defRecipeConf
+  , defRecipeConfCustomFacts
   , recipeConf
   , runRecipe
-  , runRecipeFacts
+  , runRecipeCustomFacts
   , runRecipeConf
   , runRecipeConfEither
   , printRecipeFailure
@@ -147,8 +148,11 @@ data IORedir = In ByteString
              deriving Show
 
 defRecipeConf :: IO (RecipeConf ())
-defRecipeConf = do
-    facts <- F.grabOnlySystemFacts
+defRecipeConf = defRecipeConfCustomFacts ()
+
+defRecipeConfCustomFacts :: Show f => f -> IO (RecipeConf f)
+defRecipeConfCustomFacts customFacts = do
+    facts <- F.grabFacts customFacts
     root <- getCurrentDirectory
     hostname <- getHostName
     return RecipeConf {
@@ -370,10 +374,10 @@ runRecipe recipe = do
     conf <- defRecipeConf
     runRecipeConf conf recipe
 
-runRecipeFacts :: F.Facts () -> Recipe () a -> IO ()
-runRecipeFacts facts recipe = do
-    conf <- defRecipeConf
-    runRecipeConf conf { recipeConfFacts = facts } recipe
+runRecipeCustomFacts :: Show f => f -> Recipe f a -> IO ()
+runRecipeCustomFacts customFacts recipe = do
+    conf <- defRecipeConfCustomFacts customFacts
+    runRecipeConf conf recipe
 
 runRecipeConf :: RecipeConf f -> Recipe f a -> IO ()
 runRecipeConf conf recipe = do

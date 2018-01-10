@@ -61,11 +61,11 @@ systemFacts g (Facts system custom) = fmap (\system' -> Facts system' custom) (g
 customFacts :: Lens' (Facts f) f
 customFacts g (Facts system custom) = fmap (\custom' -> Facts system custom') (g custom)
 
-grabFacts :: Show a => IO a -> IO (Facts a)
-grabFacts grabCustom = Facts <$> grabSystemFacts <*> grabCustom
+grabFacts :: Show a => a -> IO (Facts a)
+grabFacts cusFacts = Facts <$> grabSystemFacts <*> return cusFacts
 
 grabOnlySystemFacts :: IO (Facts ())
-grabOnlySystemFacts = grabFacts $ return ()
+grabOnlySystemFacts = grabFacts ()
 
 grabSystemFacts :: IO SystemFacts
 grabSystemFacts = SystemFacts <$> grabOsRelease <*> getCurrentTime
