@@ -1,5 +1,6 @@
 module Cook.Catalog.Arch.Pacman
-  ( upgradePackages
+  ( updatePackages
+  , upgradePackages
   , clearPackagesCache
   , installPackages
   , provider
@@ -15,6 +16,10 @@ import qualified Cook.Provider.PkgManager as P
 
 pacman :: NonEmpty String -> Step
 pacman args = proc "pacman" $ toList $ ["--quiet", "--noconfirm"] <> args
+
+updatePackages :: Recipe f ()
+updatePackages = withRecipeName "Arch.Pacman.UpdatePackages" $
+    run $ pacman ["-Sy"]
 
 upgradePackages :: Recipe f ()
 upgradePackages = withRecipeName "Arch.Pacman.UpgradePackages" $
@@ -37,9 +42,10 @@ clearPackagesCache = withRecipeName "Arch.Pacman.ClearPackagesCache" $
 provider :: Provider f
 provider = prov
   where prov = P.Provider
-            { P._upgradePackages = upgradePackages
+            { P._updatePackages     = updatePackages
+            , P._upgradePackages    = upgradePackages
             , P._clearPackagesCache = clearPackagesCache
-            , P._requirePackages = P.requirePackagesGeneric prov
+            , P._requirePackages    = P.requirePackagesGeneric prov
             , P._isPackageInstalled = isPackageInstalled
-            , P._installPackages = installPackages
+            , P._installPackages    = installPackages
             }

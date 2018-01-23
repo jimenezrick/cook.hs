@@ -1,5 +1,6 @@
 module Cook.Provider.PkgManager
     ( Provider (..)
+    , updatePackages
     , upgradePackages
     , clearPackagesCache
     , requirePackages
@@ -17,7 +18,8 @@ import Data.List.NonEmpty
 import Cook.Recipe
 
 data Provider f = Provider
-    { _upgradePackages    :: Recipe f ()
+    { _updatePackages     :: Recipe f ()
+    , _upgradePackages    :: Recipe f ()
     , _clearPackagesCache :: Recipe f ()
     , _requirePackages    :: NonEmpty String -> Recipe f ()
     , _isPackageInstalled :: String -> Recipe f Bool
@@ -37,9 +39,10 @@ requirePackagesGeneric prov pkgs = withRecipeName "Provider.RequirePackagesGener
 
 nullProvider :: Provider f
 nullProvider = Provider
-    { _upgradePackages = return ()
+    { _updatePackages     = return ()
+    , _upgradePackages    = return ()
     , _clearPackagesCache = return ()
-    , _requirePackages = const $ return ()
+    , _requirePackages    = const $ return ()
     , _isPackageInstalled = const $ return False
-    , _installPackages = const $ return ()
+    , _installPackages    = const $ return ()
     }

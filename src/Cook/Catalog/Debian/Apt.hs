@@ -1,6 +1,7 @@
 module Cook.Catalog.Debian.Apt
   ( aptGet
   , addAptRepository
+  , updatePackages
   , upgradePackages
   , clearPackagesCache
   , installPackages
@@ -30,9 +31,13 @@ installPackages :: NonEmpty String -> Recipe f ()
 installPackages pkgs = withRecipeName "Debian.Apt.InstallPackages" $
     aptGet $ "install" <| pkgs
 
+updatePackages :: Recipe f ()
+updatePackages = withRecipeName "Debian.Apt.UpdatePackages" $
+    aptGet ["update"]
+
 upgradePackages :: Recipe f ()
 upgradePackages = withRecipeName "Debian.Apt.UpgradePackages" $ do
-    aptGet ["update"]
+    updatePackages
     aptGet ["upgrade"]
 
 isPackageInstalled :: String -> Recipe f Bool
@@ -45,15 +50,16 @@ isPackageInstalled pkg = withRecipeName "IsPackageInstalled" $ do
 
 clearPackagesCache :: Recipe f ()
 clearPackagesCache = withRecipeName "Debian.Apt.ClearPackagesCache" $ do
-    aptGet ["--auto-remove", "purge"]
+    aptGet ["autoremove", "--purge"]
     aptGet ["clean"]
 
 provider :: Provider f
 provider = prov
   where prov = P.Provider
-            { P._upgradePackages = upgradePackages
+            { P._updatePackages     = updatePackages
+            , P._upgradePackages    = upgradePackages
             , P._clearPackagesCache = clearPackagesCache
-            , P._requirePackages = P.requirePackagesGeneric prov
+            , P._requirePackages    = P.requirePackagesGeneric prov
             , P._isPackageInstalled = isPackageInstalled
-            , P._installPackages = installPackages
+            , P._installPackages    = installPackages
             }
