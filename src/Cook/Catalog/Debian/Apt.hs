@@ -1,5 +1,7 @@
-module Cook.Catalog.Debian.Apt (
-    upgradePackages
+module Cook.Catalog.Debian.Apt
+  ( aptGet
+  , addAptRepository
+  , upgradePackages
   , clearPackagesCache
   , installPackages
   , provider
@@ -9,16 +11,20 @@ import Data.List (last)
 import Data.List.NonEmpty hiding (last)
 import Data.Semigroup
 
+import qualified Data.Text.Lazy as T
+
 import Cook.Recipe
 import Cook.Provider.PkgManager (Provider)
-
-import qualified Data.Text.Lazy as T
 
 import qualified Cook.Provider.PkgManager as P
 
 aptGet :: NonEmpty String -> Recipe f ()
 aptGet args = withEnv [("DEBIAN_FRONTEND", "noninteractive")] $
-    run $ proc "apt-get" $ toList $ ["--quiet", "--yes"] <> args
+    runProc "apt-get" $ toList $ ["--quiet", "--yes"] <> args
+
+addAptRepository :: String -> Recipe f ()
+addAptRepository repo = withRecipeName "Debian.Apt.AddAptRepository" $
+    runProc "add-apt-repository" [repo]
 
 installPackages :: NonEmpty String -> Recipe f ()
 installPackages pkgs = withRecipeName "Debian.Apt.InstallPackages" $
