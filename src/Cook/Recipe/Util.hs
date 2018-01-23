@@ -1,5 +1,5 @@
 module Cook.Recipe.Util (
-    withTempDir
+    withCdTempDir
   , getHTTP
   , withFileContent
   , mapFileContent
@@ -18,8 +18,8 @@ import qualified Data.Text.IO as T
 
 import Cook.Recipe
 
-withTempDir :: (FilePath -> Recipe f a) -> Recipe f a
-withTempDir recipe = withRecipeName "Util.WithTempDir" $ do
+withCdTempDir :: (FilePath -> Recipe f a) -> Recipe f a
+withCdTempDir recipe = withRecipeName "Util.WithTempDir" $ do
     (tmpDir, _) <- runOut $ proc "mktemp" ["--tmpdir", "--directory", "cook-XXXXXX"]
     let tmpDir' = head . lines $ unpack tmpDir
     a <- withCd tmpDir' $ recipe tmpDir'
