@@ -58,26 +58,28 @@ module Cook.Recipe
   ) where
 
 import Control.Arrow
-import Control.Exception.Safe (MonadThrow, MonadCatch, SomeException, handle)
+import Control.Exception.Safe (MonadCatch, MonadThrow, SomeException, handle)
+import Control.Monad.Base
 import Control.Monad.Except
 import Control.Monad.Morph
 import Control.Monad.State
+import Control.Monad.Trans.Control
 import Data.ByteString.Lazy (ByteString, empty)
 import Data.Char (toUpper)
 import Data.List
-import Data.List.NonEmpty (NonEmpty (..))
+import Data.List.NonEmpty (NonEmpty(..))
 import Data.List.Split (splitOn)
 import Data.Maybe
-import Data.Text.Lazy (Text)
+import Data.Text.Lazy (Text, unpack)
 import Network.BSD
 import Safe (headMay)
 import System.Directory
-import System.Environment (lookupEnv, getEnvironment)
+import System.Environment (getEnvironment, lookupEnv)
 import System.Exit
 import System.FilePath
 import System.IO
-import Text.Printf
 import Text.Pretty.Simple (pShowNoColor)
+import Text.Printf
 
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
@@ -126,7 +128,12 @@ deriving instance Show (Ctx f)
 
 type RecipeFailTrace f = NonEmpty (TraceStep f)
 
-newtype SafeIO a = SafeIO { getIO :: IO a } deriving (Functor, Applicative, Monad, MonadThrow, MonadCatch)
+newtype SafeIO a = SafeIO { getIO :: IO a } deriving (Functor, Applicative, Monad, MonadBase IO, MonadThrow, MonadCatch)
+
+instance MonadBaseControl IO SafeIO where
+    type StM SafeIO a = a
+    liftBaseWith f = SafeIO $ liftBaseWith $ \runInBase -> f (runInBase . getIO)
+    restoreM = SafeIO . return
 
 type Recipe f = ExceptT (RecipeFailTrace f) (StateT (Ctx f) SafeIO)
 

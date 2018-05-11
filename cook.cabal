@@ -27,6 +27,8 @@ library
                      , ScopedTypeVariables
                      , RankNTypes
                      , GADTs
+                     , MultiParamTypeClasses
+                     , TypeFamilies
   hs-source-dirs:      src
   exposed-modules:     Cook.Recipe
                      , Cook.Recipe.Config
@@ -50,6 +52,9 @@ library
                      , Cook.Provider
                      , Cook.Provider.PkgManager
   build-depends:       base >=4.8 && <5
+                     , lifted-base
+                     , monad-control
+                     , transformers-base
                      , bytestring
                      , containers
                      , unordered-containers
@@ -76,6 +81,7 @@ library
                      , time
                      , safe-exceptions
                      , pretty-simple
+                     , temporary
 
 executable cook-contain
   ghc-options:         -Wall

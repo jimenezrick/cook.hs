@@ -7,11 +7,14 @@ module Cook.Recipe.Util (
   , execCwd
   ) where
 
-import Data.ByteString.Lazy (ByteString ,fromStrict)
+import Control.Exception.Lifted (bracket)
+import Data.ByteString.Lazy (ByteString, fromStrict)
 import Data.FileEmbed
 import Data.Text (Text)
 import Data.Text.Lazy (unpack)
 import Network.HTTP.Simple
+import System.Directory (removeDirectoryRecursive)
+import System.IO.Temp (getCanonicalTemporaryDirectory, createTempDirectory)
 
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -19,12 +22,11 @@ import qualified Data.Text.IO as T
 import Cook.Recipe
 
 withCdTempDir :: (FilePath -> Recipe f a) -> Recipe f a
-withCdTempDir recipe = withRecipeName "Util.WithTempDir" $ do
-    (tmpDir, _) <- runOut $ proc "mktemp" ["--tmpdir", "--directory", "cook-XXXXXX"]
-    let tmpDir' = head . lines $ unpack tmpDir
-    a <- withCd tmpDir' $ recipe tmpDir'
-    runProc "rm" ["-rf", tmpDir']
-    return a
+withCdTempDir recipe = withRecipeName "Util.WithTempDir" $
+    bracket
+        (recipeIO $ getCanonicalTemporaryDirectory >>= createTempDirectory "cook")
+        (recipeIO . removeDirectoryRecursive)
+        (\tmpDir -> withCd tmpDir $ recipe tmpDir)
 
 getHTTP :: String -> Recipe f ByteString
 getHTTP url = withRecipeName "Util.GetHTTP" $ do
