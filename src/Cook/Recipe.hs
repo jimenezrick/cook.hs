@@ -367,7 +367,7 @@ runOut :: Step -> Recipe f (Text, Text)
 runOut step = (T.decodeUtf8 *** T.decodeUtf8) <$> runOutB step
 
 runInOut :: Text -> Step -> Recipe f (Text, Text)
-runInOut tin step = (T.decodeUtf8 *** T.decodeUtf8) . fromJust <$> run' (Just . In $ T.encodeUtf8 tin) step
+runInOut tin step = (T.decodeUtf8 *** T.decodeUtf8) <$> runInOutB (T.encodeUtf8 tin) step
 
 runRecipe :: Recipe () a -> IO ()
 runRecipe recipe = do
