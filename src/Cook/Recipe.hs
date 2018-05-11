@@ -128,7 +128,9 @@ deriving instance Show (Ctx f)
 
 type RecipeFailTrace f = NonEmpty (TraceStep f)
 
-newtype SafeIO a = SafeIO { getIO :: IO a } deriving (Functor, Applicative, Monad, MonadBase IO, MonadThrow, MonadCatch)
+newtype SafeIO a = SafeIO
+    { getIO :: IO a
+    } deriving (Functor, Applicative, Monad, MonadBase IO, MonadThrow, MonadCatch)
 
 instance MonadBaseControl IO SafeIO where
     type StM SafeIO a = a
